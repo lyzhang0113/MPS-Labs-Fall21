@@ -11,6 +11,7 @@
 // Any valid keystroke turns on the green LED on the board; invalid entries turn it off
 //
 
+#define ESC 0x1B
 
 //------------------------------------------------------------------------------------
 // Includes
@@ -34,8 +35,9 @@ int main(void)
 
     printf("\033[2J\033[;H"); // Erase screen & move cursor to home position
     fflush(stdout); // Need to flush stdout after using printf that doesn't end in \n
-    printf("Test of the printf() function.\n\n");
+    printf("To exit: Hit [ESC] or ^[ (CTRL+[)\n\n");
 
+/*    
     // Need to enable clock for peripheral bus on GPIO Port J
     __HAL_RCC_GPIOJ_CLK_ENABLE(); 	// Through HAL
     RCC->AHB1ENR |= RCC_AHB1ENR_GPIOJEN; // or through registers
@@ -59,9 +61,15 @@ int main(void)
 
 //    volatile uint32_t * GREENLEDODR = (uint32_t*) 0x40022414U; // Address of GPIO J Output Data Register
 //    *GREENLEDODR ^= (uint16_t)0x0020U; // Toggle Green LED (LED2)
-
+*/
     while(1)
     {
+        choice = getchar();
+        if (choice == ESC)  { return 1; }
+        else {
+            printf("The keyboard character is %c.\n", choice);
+        }
+/*
 
         printf("Hello World!\r\n\n");
         printf("( Welcome to Microprocessor Systems )\r\n\n\n");
@@ -105,6 +113,7 @@ int main(void)
 				int a = uart_getline(&USB_UART, in, size);
 				printf("\r\nuart_getline result: %d\r\n", a);
 		}
+    */
 }
 
 //------------------------------------------------------------------------------------
