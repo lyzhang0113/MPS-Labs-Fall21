@@ -62,8 +62,8 @@ all: main-build
 main-build: LAB-01-Template.elf secondary-outputs
 
 # Tool invocations
-LAB-01-Template.elf: $(OBJS) $(USER_OBJS) /home/zhangl33/STM32CubeIDE/workspace_1.7.0/LAB-01-Template/LinkerScript.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "LAB-01-Template.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m7 -T"/home/zhangl33/STM32CubeIDE/workspace_1.7.0/LAB-01-Template/LinkerScript.ld" --specs=nosys.specs -Wl,-Map="LAB-01-Template.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv5-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+LAB-01-Template.elf: $(OBJS) $(USER_OBJS) /home/zhangl33/STM32CubeIDE/MPS-Labs-Fall21/LAB-01-Template/LinkerScript.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "LAB-01-Template.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m7 -T"/home/zhangl33/STM32CubeIDE/MPS-Labs-Fall21/LAB-01-Template/LinkerScript.ld" --specs=nosys.specs -Wl,-Map="LAB-01-Template.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv5-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 
