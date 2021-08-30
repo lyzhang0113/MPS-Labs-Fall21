@@ -35,9 +35,9 @@ int main(void)
 
     printf("\033[2J\033[;H"); // Erase screen & move cursor to home position
     fflush(stdout); // Need to flush stdout after using printf that doesn't end in \n
-    printf("To exit: Hit [ESC] or ^[ (CTRL+[)\n\n");
+    printf("To exit: Hit [ESC] or ^[ (CTRL+[)\r\n\n");
 
-/*    
+
     // Need to enable clock for peripheral bus on GPIO Port J
     __HAL_RCC_GPIOJ_CLK_ENABLE(); 	// Through HAL
     RCC->AHB1ENR |= RCC_AHB1ENR_GPIOJEN; // or through registers
@@ -61,13 +61,13 @@ int main(void)
 
 //    volatile uint32_t * GREENLEDODR = (uint32_t*) 0x40022414U; // Address of GPIO J Output Data Register
 //    *GREENLEDODR ^= (uint16_t)0x0020U; // Toggle Green LED (LED2)
-*/
+
     while(1)
     {
         choice = getchar();
         if (choice == ESC)  { return 1; }
         else {
-            printf("The keyboard character is %c.\n", choice);
+            printf("The keyboard character is %c.\r\n\n", choice);
         }
 /*
 
