@@ -13,6 +13,9 @@
 
 #define ESC 0x1B
 
+#define TERM_WIDTH 80
+#define TERM_HEIGHT 24
+
 //------------------------------------------------------------------------------------
 // Includes
 //------------------------------------------------------------------------------------
@@ -30,13 +33,16 @@ int main(void)
     Sys_Init(); // This always goes at the top of main (defined in init.c)
 
     char choice;
-	char in[3];
-    int size = 3;
-
+    int unprintables = 0;
+    printf("\033[1;44m"); // Set print color to yellow
     printf("\033[2J\033[;H"); // Erase screen & move cursor to home position
+    printf("\033[1;33m"); // Set print color to yellow
     fflush(stdout); // Need to flush stdout after using printf that doesn't end in \n
-    printf("To exit: Hit [ESC] or ^[ (CTRL+[)\r\n\n");
+    //printf("To exit: Hit [ESC] or ^[ (CTRL+[)\r\n\n");
 
+    char* content = "PRESS <ESC> OR <CTL>+[ TO QUIT";
+    int padlen = (TERM_WIDTH - strlen(content)) / 2;
+    printf("\n%*s%s%*s\r\n\n\n\n", padlen, "", content, padlen, "");
 
     // Need to enable clock for peripheral bus on GPIO Port J
     __HAL_RCC_GPIOJ_CLK_ENABLE(); 	// Through HAL
@@ -57,17 +63,24 @@ int main(void)
     volatile uint32_t * GREENLEDBSRR = (uint32_t*) 0x40022418U; // Address of GPIO J Bit Set/Reset Register
     *GREENLEDBSRR = (uint16_t)0x0020U; // Turn on Green LED (LED2)
 
-//    HAL_Delay(1000); // Pause for a second
+    HAL_Delay(1000); // Pause for a second
 
 //    volatile uint32_t * GREENLEDODR = (uint32_t*) 0x40022414U; // Address of GPIO J Output Data Register
 //    *GREENLEDODR ^= (uint16_t)0x0020U; // Toggle Green LED (LED2)
-
+    printf("\033[s");
     while(1)
     {
         choice = getchar();
         if (choice == ESC)  { return 1; }
-        else {
-            printf("The keyboard character is %c.\r\n\n", choice);
+        if (choice > 31 && choice != 127) {
+            printf("\033[uThe keyboard character is \033[1;31m%c\033[1;33m.\r\n\n\n\n\n\n", choice);
+            fflush(stdout);
+        } else {
+        	if (++unprintables >= TERM_HEIGHT - 12) {
+        		printf("\033[13;0H\033[1K\033[23;0");
+        	}
+        	printf("The keyboard character %x is \033[1;4m'not printable'\033[1;24m.\r\n", choice);
+        	fflush(stdout);
         }
 /*
 
