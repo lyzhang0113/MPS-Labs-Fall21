@@ -57,7 +57,7 @@ int main(void)
     volatile uint32_t * GREENLEDBSRR = (uint32_t*) 0x40022418U; // Address of GPIO J Bit Set/Reset Register
     *GREENLEDBSRR = (uint16_t)0x0020U; // Turn on Green LED (LED2)
 
-    HAL_Delay(1000); // Pause for a second
+//    HAL_Delay(1000); // Pause for a second
 
 //    volatile uint32_t * GREENLEDODR = (uint32_t*) 0x40022414U; // Address of GPIO J Output Data Register
 //    *GREENLEDODR ^= (uint16_t)0x0020U; // Toggle Green LED (LED2)
