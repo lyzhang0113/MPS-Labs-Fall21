@@ -20,14 +20,34 @@
  * LD4 ===(red)===> GPIO_D PIN 4
 */
 
+
 //------------------------------------------------------------------------------------
 // Includes
 //------------------------------------------------------------------------------------
 #include "stm32f769xx.h"
 #include "init.h"
 
+#include<stdlib.h>
 #include<stdint.h>
 
+GPIO_InitTypeDef LD_J, LD_A, LD_D;
+
+void LED_Init( void )
+{
+	/* Initialize Pin Numbers */
+	LD_J.Pin = GPIO_PIN_13 | GPIO_PIN_5;
+	LD_A.Pin = GPIO_PIN_12;
+	LD_D.Pin = GPIO_PIN_4;
+
+	/* Initialize Pin Modes */
+	LD_J.Mode = LD_A.Mode = LD_D.Mode = GPIO_MODE_OUTPUT_PP;
+
+	/* Initialize Pull */
+	LD_J.Pull = LD_A.Pull = LD_D.Pull = GPIO_PULLUP;
+
+	/* Initialize Speed */
+	LD_J.Speed = LD_A.Speed = LD_D.Speed = GPIO_SPEED_MEDIUM;
+}
 
 //------------------------------------------------------------------------------------
 // MAIN Routine
@@ -45,13 +65,9 @@ int main(void)
     __HAL_RCC_GPIOA_CLK_ENABLE();
     __HAL_RCC_GPIOD_CLK_ENABLE();
 
-    while(1)
-    {
-        choice = getchar();
-        if (choice == ESC) { // halt on ESC or CTL+[
-        	GPIOJ->BSRR = (uint32_t)GPIO_PIN_5 << 16;
-        	while(1);
-        }
-        printf("The keyboard character is %c.\r\n", choice);
-    }
+    // Initialize GPIO structs
+    HAL_GPIO_Init(GPIOJ, &LD_J);
+    HAL_GPIO_Init(GPIOA, &LD_A);
+    HAL_GPIO_Init(GPIOD, &LD_D);
+
 }
