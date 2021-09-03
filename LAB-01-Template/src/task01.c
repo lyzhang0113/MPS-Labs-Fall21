@@ -35,7 +35,7 @@ int main(void)
 
     // Need to enable clock for peripheral bus on GPIO Port J
     __HAL_RCC_GPIOJ_CLK_ENABLE(); 	// Through HAL
-    GPIOJ->MODER |= 1024U; //Bitmask for GPIO J Pin 5 initialization (set it to Output mode): 0x00000400U or 1024U in decimal
+    GPIOJ->MODER |= 1 << 5 * 2; //Bitmask for GPIO J Pin 5 initialization (set it to Output mode): 0x00000400U or 1024U in decimal
     GPIOJ->BSRR = (uint16_t)GPIO_PIN_5; // Turn on Green LED (LED2)
 
     printf("PRESS <ESC> OR <CTL>+[ TO QUIT\r\n"); // print instruction msg

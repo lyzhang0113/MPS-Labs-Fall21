@@ -1,3 +1,4 @@
 .metadata/
 **/Debug
-**/.settings
+**/*.settings
+/RemoteSystemsTempFiles/
