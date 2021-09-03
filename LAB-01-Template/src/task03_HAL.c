@@ -43,7 +43,7 @@ void LED_Init( void )
 	LD_J.Mode = LD_A.Mode = LD_D.Mode = GPIO_MODE_OUTPUT_PP;
 
 	/* Initialize Pull */
-	LD_J.Pull = LD_A.Pull = LD_D.Pull = GPIO_PULLUP;
+	LD_J.Pull = LD_A.Pull = LD_D.Pull = GPIO_NOPULLUP;
 
 	/* Initialize Speed */
 	LD_J.Speed = LD_A.Speed = LD_D.Speed = GPIO_SPEED_MEDIUM;
