@@ -99,10 +99,11 @@ int main(void)
         PC6  = HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_6);
         PJ1  = HAL_GPIO_ReadPin(GPIOJ, GPIO_PIN_1);
         PF6  = HAL_GPIO_ReadPin(GPIOF, GPIO_PIN_6);
+
         /* Write Pins */
         HAL_GPIO_WritePin(GPIOJ, GPIO_PIN_13, PC7);
         HAL_GPIO_WritePin(GPIOJ, GPIO_PIN_5, PC6);
-        HAL_GPIO_WritePin(GPIOJ, GPIO_PIN_12, PJ1);
-        HAL_GPIO_WritePin(GPIOF, GPIO_PIN_4, PF6);
+        HAL_GPIO_WritePin(GPIOA, GPIO_PIN_12, PJ1);
+        HAL_GPIO_WritePin(GPIOD, GPIO_PIN_4, PF6);
     }
 }
