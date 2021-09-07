@@ -48,7 +48,7 @@ void LED_Init( void )
     AH_C.Mode = AH_J.Mode = AH_F.Mode = GPIO_MODE_INPUT;
 
 	/* Initialize Pull */
-    LD_J.Pull = LD_A.Pull = LD_D.Pull = GPIO_NOPULLUP;
+    LD_J.Pull = LD_A.Pull = LD_D.Pull = GPIO_NOPULL;
     AH_C.Pull = AH_J.Pull = AH_F.Pull = GPIO_PULLUP;
 
 	/* Initialize Speed */
