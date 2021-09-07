@@ -98,7 +98,7 @@ int main(void)
         PC7  = HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_7);
         PC6  = HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_6);
         PJ1  = HAL_GPIO_ReadPin(GPIOJ, GPIO_PIN_1);
-        PF6  = HAL_GPIO_ReadPin(GPIOF, GPIO_PIN_6);
+        PF6  = HAL_GPIO_ReadPin(GPIOF, GPIO_PIN_6) ^ 1;
 
         /* Write Pins */
         HAL_GPIO_WritePin(GPIOJ, GPIO_PIN_13, PC7);
