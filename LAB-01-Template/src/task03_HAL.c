@@ -36,23 +36,23 @@ GPIO_InitTypeDef LD_J, LD_A, LD_D, AH_C, AH_J, AH_F;
 void LED_Init( void )
 {
 	/* Initialize Pin Numbers */
-	LD_J.Pin = GPIO_PIN_13 | GPIO_PIN_5;    // LED Pins
-	LD_A.Pin = GPIO_PIN_12;
-	LD_D.Pin = GPIO_PIN_4;
+    LD_J.Pin = GPIO_PIN_13 | GPIO_PIN_5;    // LED Pins
+    LD_A.Pin = GPIO_PIN_12;
+    LD_D.Pin = GPIO_PIN_4;
     AH_C.Pin = GPIO_PIN_6 | GPIO_PIN_7;     // Arduino Pins
     AH_J.Pin = GPIO_PIN_1;
     AH_F.Pin = GPIO_PIN_6;
 
 	/* Initialize Pin Modes */
-	LD_J.Mode = LD_A.Mode = LD_D.Mode = GPIO_MODE_OUTPUT_PP;
+    LD_J.Mode = LD_A.Mode = LD_D.Mode = GPIO_MODE_OUTPUT_PP;
     AH_C.Mode = AH_J.Mode = AH_F.Mode = GPIO_MODE_INPUT;
 
 	/* Initialize Pull */
-	LD_J.Pull = LD_A.Pull = LD_D.Pull = GPIO_NOPULLUP;
+    LD_J.Pull = LD_A.Pull = LD_D.Pull = GPIO_NOPULLUP;
     AH_C.Pull = AH_J.Pull = AH_F.Pull = GPIO_PULLUP;
 
 	/* Initialize Speed */
-	LD_J.Speed = LD_A.Speed = LD_D.Speed = GPIO_SPEED_MEDIUM;
+    LD_J.Speed = LD_A.Speed = LD_D.Speed = GPIO_SPEED_MEDIUM;
     AH_C.Speed = AH_J.Speed = AH_F.Speed = GPIO_SPEED_MEDIUM;
 }
 
