@@ -30,7 +30,7 @@ int main(void)
     Sys_Init(); // This always goes at the top of main (defined in init.c)
 
     char choice;
-    printf("\033[0m\033[2J\033[;H"); // Reset all attributes & Erase screen & move cursor to home position
+    printf("\033[0m\033[2J\033[;H\033[r"); // Reset all attributes & Erase screen & move cursor to home position & reset scroll section
     fflush(stdout); // Need to flush stdout after using printf that doesn't end in \n
 
     // Need to enable clock for peripheral bus on GPIO Port J
