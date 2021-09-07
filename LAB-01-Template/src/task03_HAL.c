@@ -30,23 +30,30 @@
 #include<stdlib.h>
 #include<stdint.h>
 
-GPIO_InitTypeDef LD_J, LD_A, LD_D;
+GPIO_InitTypeDef LD_J, LD_A, LD_D, AH_C, AH_J, AH_F;
+
 
 void LED_Init( void )
 {
 	/* Initialize Pin Numbers */
-	LD_J.Pin = GPIO_PIN_13 | GPIO_PIN_5;
+	LD_J.Pin = GPIO_PIN_13 | GPIO_PIN_5;    // LED Pins
 	LD_A.Pin = GPIO_PIN_12;
 	LD_D.Pin = GPIO_PIN_4;
+    AH_C.Pin = GPIO_PIN_6 | GPIO_PIN_7;     // Arduino Pins
+    AH_J.Pin = GPIO_PIN_1;
+    AH_F.Pin = GPIO_PIN_6;
 
 	/* Initialize Pin Modes */
 	LD_J.Mode = LD_A.Mode = LD_D.Mode = GPIO_MODE_OUTPUT_PP;
+    AH_C.Mode = AH_J.Mode = AH_F.Mode = GPIO_MODE_INPUT;
 
 	/* Initialize Pull */
 	LD_J.Pull = LD_A.Pull = LD_D.Pull = GPIO_NOPULLUP;
+    AH_C.Pull = AH_J.Pull = AH_F.Pull = GPIO_PULLUP;
 
 	/* Initialize Speed */
 	LD_J.Speed = LD_A.Speed = LD_D.Speed = GPIO_SPEED_MEDIUM;
+    AH_C.Speed = AH_J.Speed = AH_F.Speed = GPIO_SPEED_MEDIUM;
 }
 
 //------------------------------------------------------------------------------------
@@ -56,18 +63,44 @@ int main(void)
 {
     Sys_Init(); // This always goes at the top of main (defined in init.c)
 
-    char choice;
     printf("\033[0m\033[2J\033[;H"); // Reset all attributes & Erase screen & move cursor to home position
     fflush(stdout); // Need to flush stdout after using printf that doesn't end in \n
 
-    // Need to enable clock for peripheral bus on GPIO Port J
+    // Need to enable clock for peripheral bus on GPIO Port J, A, and D
     __HAL_RCC_GPIOJ_CLK_ENABLE(); 	// Through HAL
     __HAL_RCC_GPIOA_CLK_ENABLE();
     __HAL_RCC_GPIOD_CLK_ENABLE();
+    __HAL_RCC_GPIOC_CLK_ENABLE();
+    __HAL_RCC_GPIOF_CLK_ENABLE();
 
     // Initialize GPIO structs
     HAL_GPIO_Init(GPIOJ, &LD_J);
     HAL_GPIO_Init(GPIOA, &LD_A);
     HAL_GPIO_Init(GPIOD, &LD_D);
+    HAL_GPIO_Init(GPIOJ, &AH_J);
+    HAL_GPIO_Init(GPIOC, &AH_C);
+    HAL_GPIO_Init(GPIOF, &AH_F);
 
+    GPIO_PinState PJ13, PJ5, PA12, PD4;
+    while (1)
+    {
+        /* Corresponding Pairs
+        * -------------------
+        * PJ13 == PC7
+        * PJ5  == PC6
+        * PA12 == PJ1
+        * PD4  == PF6
+        */
+        
+        /* Read Pins */
+        PJ13  = HAL_GPIO_ReadPin(GPIOJ, GPIO_PIN_13);
+        PJ5   = HAL_GPIO_ReadPin(GPIOJ, GPIO_PIN_5);
+        PA12  = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_12);
+        PD4   = HAL_GPIO_ReadPin(GPIOD, GPIO_PIN_4);
+        /* Write Pins */
+        HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, PJ13);
+        HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, PJ5);
+        HAL_GPIO_WritePin(GPIOJ, GPIO_PIN_1, PA12);
+        HAL_GPIO_WritePin(GPIOF, GPIO_PIN_6, PD4);
+    }
 }
