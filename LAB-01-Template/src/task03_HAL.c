@@ -61,7 +61,10 @@ void LED_Init( void )
 //------------------------------------------------------------------------------------
 int main(void)
 {
+    GPIO_PinState PC7, PC6, PJ1, PF6;
+
     Sys_Init(); // This always goes at the top of main (defined in init.c)
+    LED_Init();
 
     printf("\033[0m\033[2J\033[;H"); // Reset all attributes & Erase screen & move cursor to home position
     fflush(stdout); // Need to flush stdout after using printf that doesn't end in \n
@@ -81,7 +84,6 @@ int main(void)
     HAL_GPIO_Init(GPIOC, &AH_C);
     HAL_GPIO_Init(GPIOF, &AH_F);
 
-    GPIO_PinState PJ13, PJ5, PA12, PD4;
     while (1)
     {
         /* Corresponding Pairs
@@ -93,14 +95,14 @@ int main(void)
         */
         
         /* Read Pins */
-        PJ13  = HAL_GPIO_ReadPin(GPIOJ, GPIO_PIN_13);
-        PJ5   = HAL_GPIO_ReadPin(GPIOJ, GPIO_PIN_5);
-        PA12  = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_12);
-        PD4   = HAL_GPIO_ReadPin(GPIOD, GPIO_PIN_4);
+        PC7  = HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_7);
+        PC6  = HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_6);
+        PJ1  = HAL_GPIO_ReadPin(GPIOJ, GPIO_PIN_1);
+        PF6  = HAL_GPIO_ReadPin(GPIOF, GPIO_PIN_6);
         /* Write Pins */
-        HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, PJ13);
-        HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, PJ5);
-        HAL_GPIO_WritePin(GPIOJ, GPIO_PIN_1, PA12);
-        HAL_GPIO_WritePin(GPIOF, GPIO_PIN_6, PD4);
+        HAL_GPIO_WritePin(GPIOJ, GPIO_PIN_13, PC7);
+        HAL_GPIO_WritePin(GPIOJ, GPIO_PIN_5, PC6);
+        HAL_GPIO_WritePin(GPIOJ, GPIO_PIN_12, PJ1);
+        HAL_GPIO_WritePin(GPIOF, GPIO_PIN_4, PF6);
     }
 }
