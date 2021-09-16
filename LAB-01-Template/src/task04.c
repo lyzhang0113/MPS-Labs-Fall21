@@ -31,6 +31,10 @@
 
 GPIO_InitTypeDef GPIO_A, GPIO_J;
 
+volatile uint8_t completed = 0;
+
+volatile char input;
+
 void GPIO_Init( void )
 {
     // enable the GPIO port peripheral clock
@@ -52,6 +56,15 @@ void GPIO_Init( void )
 	HAL_GPIO_Init(GPIOJ, &GPIO_J);
 	HAL_GPIO_WritePin(GPIOJ, GPIO_PIN_13, GPIO_PIN_RESET);
 	HAL_GPIO_WritePin(GPIOJ, GPIO_PIN_5, GPIO_PIN_RESET);
+}
+
+void Interrupt_Init(void) {
+
+	EXTI->IMR |= 0x01;
+	EXTI->RTSR |= 0x01;
+
+	NVIC->ISER[0] = (uint32_t) 1 << 6;
+
 }
 
 // 0: empty; 1: wall; 2: entry; 3: exit
@@ -92,7 +105,15 @@ void print_warning(char* msg) {
 }
 
 void reset_maze() {
-	erase_warning();
+
+    printf("\033[0m\033[2J\033[;H"); // Erase screen & move cursor to home position
+    fflush(stdout); // Need to flush stdout after using printf that doesn't end in \n
+
+
+    char* msg = "USE <W><A><S><D> TO MOVE AROUND IN THE MAZE";
+    int padlen = (TERM_WIDTH - strlen(msg)) / 2;
+    printf("\033[1;H%*s%s%*s\r\n", padlen, "", msg, padlen, "");
+
 	HAL_GPIO_WritePin(GPIOJ, GPIO_PIN_13, GPIO_PIN_RESET);
 	HAL_GPIO_WritePin(GPIOJ, GPIO_PIN_5, GPIO_PIN_RESET);
 	user_x = 0; user_y = 1;
@@ -125,13 +146,11 @@ void reset_maze() {
 }
 
 
-void check_completion() {
-	if (maze[user_y][user_x] == '3') {
-		print_warning("You've Reached the EXIT! Congrats!");
-		HAL_GPIO_WritePin(GPIOJ, GPIO_PIN_5, GPIO_PIN_SET);
-		while (HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0) == GPIO_PIN_RESET) ;
-		reset_maze();
-	}
+void EXTI0_IRQHandler(void) {
+	EXTI->PR = 0x01;
+	completed = 1;
+	reset_maze();
+	for (int i = 0; i < 10; i++);
 }
 
 //------------------------------------------------------------------------------------
@@ -139,23 +158,26 @@ void check_completion() {
 //------------------------------------------------------------------------------------
 int main(void)
 {
+begin:
     Sys_Init(); // This always goes at the top of main (defined in init.c)
     GPIO_Init();
-
-    printf("\033[0m\033[2J\033[;H"); // Erase screen & move cursor to home position
-    fflush(stdout); // Need to flush stdout after using printf that doesn't end in \n
-
-
-    char* msg = "USE <W><A><S><D> TO MOVE AROUND IN THE MAZE";
-    int padlen = (TERM_WIDTH - strlen(msg)) / 2;
-    printf("\033[1;H%*s%s%*s\r\n", padlen, "", msg, padlen, "");
+    Interrupt_Init();
 
     reset_maze();
 
     while(1)
     {
+    	completed = 0;
 
-    	switch(getchar()) {
+    	if (maze[user_y][user_x] == '3') {
+    		print_warning("You've Reached the EXIT! Congrats!");
+    		HAL_GPIO_WritePin(GPIOJ, GPIO_PIN_5, GPIO_PIN_SET);
+    		while (!completed);
+    		goto begin;
+    	}
+
+    	input = getchar();
+    	switch(input) {
     	case KEY_W:
     		erase_warning();
     		if (user_y == 0 || maze[user_y - 1][user_x] == '1') { // wall reached
@@ -208,10 +230,11 @@ int main(void)
     		printf("\033[42;30m**\033[2D\033[s"); // move RIGHT
     		fflush(stdout);
     		break;
+    	case ' ':
+    		break;
     	default:
     		print_warning("Invalid Key Pressed!");
     	}
-    	check_completion();
 
     }
 }
