@@ -32,7 +32,6 @@
 GPIO_InitTypeDef GPIO_A, GPIO_J;
 
 volatile uint8_t completed = 0;
-
 volatile char input;
 
 void GPIO_Init( void )
