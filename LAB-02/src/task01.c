@@ -24,11 +24,18 @@
 #include<stdint.h>
 
 //------------------------------------------------------------------------------------
+// Global Variables
+//------------------------------------------------------------------------------------
+volatile uint8_t EXTI0_DETECTED = 0;
+
+//------------------------------------------------------------------------------------
 // EXTI0 IRQ
 //------------------------------------------------------------------------------------
 void EXTI0_IRQHandler()
 {
-
+	EXTI0->PR 		= 0x01;	// Reset interrupt flag
+	EXTI0_DETECTED 	= 1;	// Set global variable
+	for (int i = 0; i < 10; i++);	// Small delay
 }
 
 //------------------------------------------------------------------------------------
@@ -50,14 +57,17 @@ int main(void)
     // set inputs to pull-up
   	GPIOJ->PUPDR |= 0x01; // J1
 
-    // enable NVIC ISER for EXTI0 (pos 6)
-    NVIC->ISER0 = (uint32_t) 1 << 6;
+    EXTI->IMR 	|= 0x01;
+    EXTI->RTSR	|= 0x01;
 
-    EXTI0->IMR |= 0x01;
-    EXTI0->RTSR
+    // enable NVIC ISER for EXTI0 (pos 6)
+    NVIC->ISER = (uint32_t) 1 << 6;
 
     while(1)
     {
-
+    	if (EXTI0_DETECTED){
+    		/* do something */
+    		EXTI0_DETECTED = 0;
+    	}
     }
 }
