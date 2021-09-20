@@ -17,7 +17,7 @@
 
 /* TIMER VALUES USED (REGISTER) */
 // Prescaler    = 10,800
-// Auto-Reload  = 100 
+// Auto-Reload  = 100
 
 //------------------------------------------------------------------------------------
 // Includes
@@ -73,7 +73,7 @@ void Register_Init( void )
 
     // initialize GPIO ports
     GPIOJ->MODER &= 0x00; //Bitmask for GPIO J Pin 0 initialization (set it to Input)
-    
+
     // set inputs to pull-up
   	GPIOJ->PUPDR |= 0x01; // J1
 
