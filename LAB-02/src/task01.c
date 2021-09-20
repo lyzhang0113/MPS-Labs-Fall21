@@ -68,7 +68,8 @@ void Register_Init( void )
     NVIC->ISER[0] = (uint32_t) 1 << (6 % 32);
 
     // enable the GPIO port peripheral clock
-    __HAL_RCC_GPIOJ_CLK_ENABLE(); 	// Through HAL
+    RCC->AHB1ENR |= RCC_AHB1ENR_GPIOJEN;
+    RCC->APB2ENR |= RCC_APB2ENR_SYSCFGEN;
 
     // initialize GPIO ports
     GPIOJ->MODER &= 0x00; //Bitmask for GPIO J Pin 0 initialization (set it to Input)
@@ -76,8 +77,11 @@ void Register_Init( void )
     // set inputs to pull-up
   	GPIOJ->PUPDR |= 0x01; // J1
 
+  	// Set up EXTI0
     EXTI->IMR 	|= 0x01;
     EXTI->RTSR	|= 0x01;
+
+    SYSCFG->EXTICR[0] |= (uint8_t) 9;	// Setup GPIO Interrupt
 }
 
 //------------------------------------------------------------------------------------
