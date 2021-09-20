@@ -26,7 +26,7 @@
 // Global Variables
 //------------------------------------------------------------------------------------
 volatile uint8_t EXTI0_DETECTED = 0;
-volatile uint8_t C8_flag = 0;
+volatile uint8_t EXTI8_DETECTED = 0;
 
 //------------------------------------------------------------------------------------
 // IRQs
@@ -43,8 +43,7 @@ void EXTI9_5_IRQHandler(void) {
 }
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
-	C8_flag = 1;
-	for (int i = 0; i < 10; i++);
+	EXTI8_DETECTED = 1;
 }
 
 //------------------------------------------------------------------------------------
@@ -71,7 +70,6 @@ void Register_Init( void )
 
     SYSCFG->EXTICR[0] |= (uint8_t) 9;	// Setup GPIO Interrupt
 }
-
 
 void Terminal_Init() {
     printf("\033[0m\033[2J\033[;H"); // Erase screen & move cursor to home position
@@ -116,8 +114,8 @@ int main(void)
     	    printf("GPIO Pin J0 has been triggered!\r\n");
             EXTI0_DETECTED = 0;     // reset global variable
     	}
-		if (C8_flag) {
-			C8_flag = 0;
+		if (EXTI8_DETECTED) {
+			EXTI8_DETECTED = 0;
 			printf("GPIO C Pin 8 Pushbutton has been pressed! \r\n");
 		}
     }
