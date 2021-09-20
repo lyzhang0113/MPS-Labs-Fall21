@@ -1,5 +1,5 @@
 //------------------------------------------------------------------------------------
-// Hello.c
+// task04.c
 //------------------------------------------------------------------------------------
 //
 // Test program to demonstrate serial port I/O.  This program writes a message on
@@ -58,12 +58,11 @@ void GPIO_Init( void )
 }
 
 void Interrupt_Init(void) {
-
+	// Set interrupt on GPIOA Port 0 (USER BUTTON)
 	EXTI->IMR |= 0x01;
 	EXTI->RTSR |= 0x01;
 
 	NVIC->ISER[0] = (uint32_t) 1 << 6;
-
 }
 
 // 0: empty; 1: wall; 2: entry; 3: exit
@@ -107,7 +106,6 @@ void reset_maze() {
 
     printf("\033[0m\033[2J\033[;H"); // Erase screen & move cursor to home position
     fflush(stdout); // Need to flush stdout after using printf that doesn't end in \n
-
 
     char* msg = "USE <W><A><S><D> TO MOVE AROUND IN THE MAZE";
     int padlen = (TERM_WIDTH - strlen(msg)) / 2;
@@ -168,15 +166,16 @@ begin:
     {
     	completed = 0;
 
+    	// check if user reached the exit
     	if (maze[user_y][user_x] == '3') {
     		print_warning("You've Reached the EXIT! Congrats!");
     		HAL_GPIO_WritePin(GPIOJ, GPIO_PIN_5, GPIO_PIN_SET);
-    		while (!completed);
+    		while (!completed); // wait for interrupt on USER BUTTON
     		goto begin;
     	}
 
-    	input = getchar();
-    	switch(input) {
+    	// check user input for movement
+    	switch(getchar()) {
     	case KEY_W:
     		erase_warning();
     		if (user_y == 0 || maze[user_y - 1][user_x] == '1') { // wall reached
@@ -228,8 +227,6 @@ begin:
     		printf("\033[0;47m  "); // restore cursor position, and erase last position mark
     		printf("\033[42;30m**\033[2D\033[s"); // move RIGHT
     		fflush(stdout);
-    		break;
-    	case ' ':
     		break;
     	default:
     		print_warning("Invalid Key Pressed!");
