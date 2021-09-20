@@ -59,8 +59,6 @@ void Timer_Init( void )
     // enable NVIC ISER for TIM6 (pos 55)
     NVIC->ISER[1] = (uint32_t) 1 << (55 % 32);
 
-    RCC->APB2ENR |= RCC_APB2ENR_SYSCFGEN;
-
     // enable TIM6 clock
     RCC->APB1ENR |= RCC_APB1ENR_TIM6EN;
     asm("nop");
@@ -70,6 +68,9 @@ void Timer_Init( void )
     TIM6->ARR    = (uint16_t) 100;      // Every 100 cycles is an overflow
     TIM6->EGR   |= (uint16_t) 1;        // Reinitialize timer counter and update registers
     TIM6->DIER  |= (uint16_t) 1;        // Enable Interrupts
+
+    TIM6->CR1	|= (uint16_t) 1 << 11;
+    TIM6->CR1 	|= (uint16_t) 1 << 7;
     TIM6->CR1   |= (uint16_t) 1;        // Start Counter
 }
 
