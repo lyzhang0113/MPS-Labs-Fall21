@@ -64,8 +64,8 @@ void Timer_Init( void )
     asm("nop");
     asm("nop");     // Two clock cycles
 
-    TIM6->PSC    = (uint16_t) 10800;    // Get 1000 Hz Clock from 108MHz source
-    TIM6->ARR    = (uint16_t) 100;      // Every 100 cycles is an overflow
+    TIM6->PSC   |= (uint16_t) 10800;    // Get 1000 Hz Clock from 108MHz source
+    TIM6->ARR   |= (uint16_t) 100;      // Every 100 cycles is an overflow
     TIM6->EGR   |= (uint16_t) 1;        // Reinitialize timer counter and update registers
     TIM6->DIER  |= (uint16_t) 1;        // Enable Interrupts
 
