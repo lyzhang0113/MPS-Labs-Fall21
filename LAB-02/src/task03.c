@@ -13,11 +13,11 @@
 
 // -- Prototypes ------------
 //
-void GPIO_Init();
-void Interrupt_Init();
+void Timer_Init();
 void Terminal_Init();
 
 // -- Global Variables ------
+TIM_HandleTypeDef htim7;
 volatile uint32_t TIME_ELAPSED = 0;
 
 //
@@ -26,12 +26,10 @@ volatile uint32_t TIME_ELAPSED = 0;
 //
 int main() {
 	Sys_Init();
+	Terminal_Init();
 	Timer_Init();
-	Interrupt_Init();
-    Terminal_Init();
 
-	while (1) {
-	}
+	while (1) ;
 }
 
 // -- Init Functions --------
@@ -42,32 +40,30 @@ void Terminal_Init() {
 }
 
 void Timer_Init() {
-	TIM_HandleTypeDef htim2;
-	htim2.Instance = TIM7;
-	htim2.Init.Prescaler = (uint32_t) 5400; // 108Mhz / 5400 = 20kHz
-	htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-	htim2.Init.Period = 20000; // 20k -> 1s
-	htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+	htim7.Instance = TIM7;
+	htim7.Init.Prescaler = (uint32_t) 5400; // 108Mhz / 5400 = 20kHz
+	htim7.Init.CounterMode = TIM_COUNTERMODE_UP;
+	htim7.Init.Period = 2000; // 2k -> 0.1s
+	htim7.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
 
-	HAL_TIM_Base_Init(&htim2);
-	HAL_TIM_Base_Start(&htim2);
+	HAL_TIM_Base_Init(&htim7);
+	HAL_TIM_Base_Start_IT(&htim7);
 }
 
 void HAL_TIM_Base_MspInit(TIM_HandleTypeDef* htim) {
 	__HAL_RCC_TIM7_CLK_ENABLE();
-}
-
-void Interrupt_Init() {
-//	HAL_NVIC_SetPriority(EXTI9_5_IRQn, 15, 0);
-	HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
+//	HAL_NVIC_SetPriority(TIM7_IRQn, 1, 3);
+	HAL_NVIC_EnableIRQ(TIM7_IRQn);
 }
 
 // -- Interrupt Handler -----
-void EXTI9_5_IRQHandler(void) {
-	HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_8);
+void TIM7_IRQHandler(void) {
+	HAL_TIM_IRQHandler(&htim7);
 }
 
-void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
-	C8_flag = 1;
-	for (int i = 0; i < 10; i++);
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
+	if (htim->Instance == TIM7) {
+	    printf("%ld tenths of a second elapsed since start of program.\r", ++TIME_ELAPSED);
+	    fflush(stdout);
+	}
 }
