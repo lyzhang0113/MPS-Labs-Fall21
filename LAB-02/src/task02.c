@@ -32,7 +32,7 @@
 //------------------------------------------------------------------------------------
 volatile uint8_t EXTI0_DETECTED = 0;
 volatile uint8_t C8_flag = 0;
-//volatile uint32_t TIME_ELAPSED = 0;
+volatile uint32_t TIME_ELAPSED = 0;
 
 //------------------------------------------------------------------------------------
 // IRQs

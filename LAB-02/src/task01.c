@@ -14,10 +14,6 @@
 /* GPIO PJ0 ---> EXTI0 */   // Register
 /* GPIO PC8 ---> EXTI8 */   // HAL
 
-/* TIMER VALUES USED (REGISTER) */
-// Prescaler    = 10,800
-// Auto-Reload  = 100 
-
 //------------------------------------------------------------------------------------
 // Includes
 //------------------------------------------------------------------------------------
@@ -31,7 +27,6 @@
 //------------------------------------------------------------------------------------
 volatile uint8_t EXTI0_DETECTED = 0;
 volatile uint8_t C8_flag = 0;
-//volatile uint32_t TIME_ELAPSED = 0;
 
 //------------------------------------------------------------------------------------
 // IRQs
@@ -42,13 +37,6 @@ void EXTI0_IRQHandler()
 	EXTI0_DETECTED 	= 1;	    // Set global variable
 	for (int i = 0; i < 10; i++);	// Small delay
 }
-
-//void TIM6_DAC_IRQHandler()
-//{
-//    TIM6->SR &= (uint16_t) 0xFE;    // Reset Interrupt bit
-//    /* Task 2 print runtime */
-//    printf("%d tenths of a second elapsed since start of program.\r\n", ++TIME_ELAPSED);
-//}
 
 void EXTI9_5_IRQHandler(void) {
 	HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_8);
@@ -84,25 +72,6 @@ void Register_Init( void )
     SYSCFG->EXTICR[0] |= (uint8_t) 9;	// Setup GPIO Interrupt
 }
 
-//------------------------------------------------------------------------------------
-// Timer (Basic) Initialization
-//------------------------------------------------------------------------------------
-//void Timer_Init( void )
-//{
-//    // enable NVIC ISER for TIM6 (pos 55)
-//    NVIC->ISER[1] = (uint32_t) 1 << (55 % 32);
-//
-//    // enable TIM6 clock
-//    RCC->APB1ENR |= RCC_APB1ENR_TIM6EN;
-//    asm("nop");
-//    asm("nop");     // Two clock cycles
-//
-//    TIM6->PSC    = (uint16_t) 10800;    // Get 1000 Hz Clock from 108MHz source
-//    TIM6->ARR    = (uint16_t) 100;      // Every 100 cycles is an overflow
-//    TIM6->EGR   |= (uint16_t) 1;        // Reinitialize timer counter and update registers
-//    TIM6->DIER  |= (uint16_t) 1;        // Enable Interrupts
-//    TIM6->CR1   |= (uint16_t) 1;        // Start Counter
-//}
 
 void Terminal_Init() {
     printf("\033[0m\033[2J\033[;H"); // Erase screen & move cursor to home position
@@ -135,7 +104,6 @@ int main(void)
 {
     Sys_Init();         // This always goes at the top of main (defined in init.c)
     Register_Init();    // Enable registers
-//    Timer_Init();       // Enable Timers
     GPIO_Init_HAL();
     Interrupt_Init_HAL();
 
