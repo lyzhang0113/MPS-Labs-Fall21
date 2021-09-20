@@ -13,7 +13,6 @@
 
 /* GPIO PJ0 ---> EXTI0 */   // Register
 /* GPIO PC8 ---> EXTI8 */   // HAL
-#define PJ0_HIGH (GPIOJ->IDR & 1) != 0
 
 /* TIMER VALUES USED (REGISTER) */
 // Prescaler    = 10,800
@@ -39,7 +38,7 @@ volatile uint8_t C8_flag = 0;
 //------------------------------------------------------------------------------------
 void EXTI0_IRQHandler()
 {
-	EXTI->PR 		= 0x01;	    // Reset Interrupt flag
+	EXTI->PR 		|= 0x01;	    // Reset Interrupt flag
 	EXTI0_DETECTED 	= 1;	    // Set global variable
 	for (int i = 0; i < 10; i++);	// Small delay
 }
