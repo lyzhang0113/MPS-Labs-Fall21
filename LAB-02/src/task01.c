@@ -12,7 +12,7 @@
 //
 
 /* GPIO PJ0 ---> EXTI0 */   // Register
-/* GPIO PE8 ---> EXTI8 */   // HAL
+/* GPIO PC8 ---> EXTI8 */   // HAL
 #define PJ0_HIGH (GPIOJ->IDR & 1) != 0
 
 /* TIMER VALUES USED (REGISTER) */
