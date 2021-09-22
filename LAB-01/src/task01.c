@@ -41,7 +41,6 @@ int main(void)
     {
     	char choice = getchar();
         if (choice == ESC) { // halt on ESC or CTL+[
-        	GPIOJ->BSRR = (uint32_t)GPIO_PIN_5 << 16;
         	while(1);
         }
         printf("The keyboard character is %c.\r\n", choice);
