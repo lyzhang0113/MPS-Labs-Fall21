@@ -11,6 +11,13 @@
 // Any valid keystroke turns on the green LED on the board; invalid entries turn it off
 //
 
+/**	NOTES:
+ * =======
+ * Added 1 uF capacitor to help with debouncing issue!
+ * Changed Rising to Falling edge
+ */
+
+
 /* GPIO PJ0 ---> EXTI0 */   // Register
 /* GPIO PC8 ---> EXTI8 */   // HAL
 
@@ -68,7 +75,8 @@ void Register_Init( void )
 
   	// Set up EXTI0
     EXTI->IMR 	|= 0x01;
-    EXTI->FTSR	|= 0x01;
+    EXTI->FTSR	|= 0x01;	/* CHANGED: rising edge to falling edge */
+
 
     SYSCFG->EXTICR[0] |= (uint8_t) 9;	// Setup GPIO Interrupt
 

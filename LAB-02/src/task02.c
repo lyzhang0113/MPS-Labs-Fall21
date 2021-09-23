@@ -43,10 +43,10 @@ volatile uint32_t TIME_ELAPSED = 0;
 
 void TIM6_DAC_IRQHandler()
 {
-    TIM6->SR &= (uint16_t) 0xFE;    // Reset Interrupt bit
+    TIM6->SR &= (uint16_t) ~1;    // Reset Interrupt bit
     /* Task 2 print runtime */
-    printf("%ld tenths of a second elapsed since start of program.\r", ++TIME_ELAPSED);
-    fflush(stdout);
+    ++TIME_ELAPSED;
+    for (int i = 0; i < 10; i++);
 }
 
 
@@ -55,7 +55,7 @@ void TIM6_DAC_IRQHandler()
 //------------------------------------------------------------------------------------
 void Timer_Init( void )
 {
-    // enable NVIC ISER for TIM6 (pos 55)
+    // enable NVIC ISER for TIM6 (pos 54)
     NVIC->ISER[1] = (uint32_t) 1 << (54 % 32);
 
     // enable TIM6 clock
@@ -63,10 +63,12 @@ void Timer_Init( void )
     asm("nop");
     asm("nop");     // Two clock cycles
 
-    TIM6->PSC   |= (uint16_t) 10800;    // Get 1000 Hz Clock from 108MHz source
-    TIM6->ARR   |= (uint16_t) 65435;      // Every 100 cycles is an overflow
+    TIM6->PSC   = (uint16_t) 10799;    // Get 10 kHz Clock from 108MHz source
+    TIM6->ARR   = (uint16_t) 999;		// Every 1000 cycles is an overflow
     TIM6->EGR   |= (uint16_t) 1;        // Reinitialize timer counter and update registers
     TIM6->DIER  |= (uint16_t) 1;        // Enable Interrupts
+
+    for (int i = 0; i < 10; i++);
     TIM6->CR1   |= (uint16_t) 1;        // Start Counter
 }
 
@@ -87,6 +89,7 @@ int main(void)
 
     while(1)
     {
-
+    	printf("%ld tenths of a second elapsed since start of program.\r", TIME_ELAPSED);
+    	fflush(stdout);
     }
 }
