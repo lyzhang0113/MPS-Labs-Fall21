@@ -25,6 +25,8 @@
 //------------------------------------------------------------------------------------
 // Global Variables
 //------------------------------------------------------------------------------------
+#define EXTI0_HIGH (GPIOJ->IDR & 1) != 0
+
 volatile uint8_t EXTI0_DETECTED = 0;
 volatile uint8_t EXTI8_DETECTED = 0;
 
@@ -35,7 +37,8 @@ void EXTI0_IRQHandler()
 {
 	EXTI->PR 		|= 0x01;	    // Reset Interrupt flag
 	EXTI0_DETECTED 	= 1;	    // Set global variable
-	for (int i = 0; i < 10; i++);	// Small delay
+	for (int i = 0; i < 10; i++) asm("nop");	// Small delay
+	while (EXTI0_HIGH);
 }
 
 void EXTI9_5_IRQHandler(void) {
@@ -114,7 +117,7 @@ int main(void)
         /* Task 1 check PB */
     	if (EXTI0_DETECTED){
     	    printf("GPIO Pin J0 has been triggered!\r\n");
-            EXTI0_DETECTED = 0;     // reset global variable
+    	    EXTI0_DETECTED = 0;
     	}
 		if (EXTI8_DETECTED) {
 			EXTI8_DETECTED = 0;
