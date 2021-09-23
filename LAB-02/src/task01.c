@@ -69,6 +69,8 @@ void Register_Init( void )
     EXTI->RTSR	|= 0x01;
 
     SYSCFG->EXTICR[0] |= (uint8_t) 9;	// Setup GPIO Interrupt
+
+    for (int i  = 0; i < 10; i++) asm("nop");
 }
 
 void Terminal_Init() {
