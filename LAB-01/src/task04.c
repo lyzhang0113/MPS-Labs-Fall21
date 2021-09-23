@@ -250,7 +250,7 @@ void GPIO_Init( void )
 	GPIO_A.Pin = GPIO_PIN_0; // USER BUTTON
 	GPIO_J.Pin = GPIO_PIN_13 | GPIO_PIN_5; // LEDs
 	/* Initialize Pin Modes */
-	GPIO_A.Mode = GPIO_MODE_INPUT;
+	GPIO_A.Mode = GPIO_MODE_IT_RISING;
 	GPIO_J.Mode = GPIO_MODE_OUTPUT_PP;
 	/* Initialize Pull */
 	GPIO_A.Pull = GPIO_PULLUP;
