@@ -38,7 +38,6 @@ void EXTI0_IRQHandler()
 	EXTI->PR 		|= 0x01;	    // Reset Interrupt flag
 	EXTI0_DETECTED 	= 1;	    // Set global variable
 	for (int i = 0; i < 10; i++) asm("nop");	// Small delay
-	while (EXTI0_HIGH);
 }
 
 void EXTI9_5_IRQHandler(void) {
@@ -69,7 +68,7 @@ void Register_Init( void )
 
   	// Set up EXTI0
     EXTI->IMR 	|= 0x01;
-    EXTI->RTSR	|= 0x01;
+    EXTI->FTSR	|= 0x01;
 
     SYSCFG->EXTICR[0] |= (uint8_t) 9;	// Setup GPIO Interrupt
 
