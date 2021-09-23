@@ -16,6 +16,7 @@
 #include "init.h"
 
 #include<stdint.h>
+#include<stdlib.h>
 
 // -- Prototypes ------------
 //
@@ -25,17 +26,19 @@ void GPIO_Init(void);
 void Interrupt_Init(void);
 
 void terminal_flash(void);
-void print_warning(char* msg);
+void print_banner(char* msg, uint8_t line_num, uint8_t beep);
 void erase_warning(void);
-void gen_rand_interrupt_period(void);
 
 // -- Global Variables ------
 //
 TIM_HandleTypeDef htim7;
-volatile uint32_t num_trials = 0;
-volatile uint32_t total_time_diff_in_mili = 0;
-volatile uint32_t start_time = 0;
-volatile uint16_t diff = 0;
+volatile uint32_t curr_time_in_mili = 0;
+
+volatile uint8_t user_btn_pressed = 0;
+
+volatile uint16_t num_trials = 0;
+volatile uint32_t react_time_sum = 0;
+volatile uint32_t react_time_last = 0;
 
 // -- Code Body -------------
 //
@@ -45,14 +48,39 @@ int main() {
 	GPIO_Init();
 	Interrupt_Init();
 	Timer_Init();
-
-	gen_rand_interrupt_period();
+	srand(HAL_GetTick());
 
 	while (1) {
-		// TODO: print num_trials, avg_reaction_time, last_reaction_time
-		printf("\033[3;HThe previous reaction time is %d\r\n", diff);
-		HAL_Delay(100); // Pause for a 100ms
-		;
+		user_btn_pressed = 0;
+		// print num_trials, avg_reaction_time, last_reaction_time
+		printf("\033[4;HNumber of Trials: %d   ", num_trials);
+		printf("\033[5;HAverage Reaction Time: %ld ms  ", num_trials == 0 ? 0 : react_time_sum / num_trials);
+		if (react_time_last) {
+			printf("\033[6;HLast Reaction Time: %ld ms  ", react_time_last);
+		}
+		uint16_t rand_period = rand() % 5000 + 1000;
+		print_banner("When ready, Please Press the Blue Button", 2, 0);
+		//press USER_BTN to begin
+		while (!user_btn_pressed);
+		user_btn_pressed = 0;
+		curr_time_in_mili = 0;
+		// wait for some random time
+		while (curr_time_in_mili < rand_period) ;
+		if (user_btn_pressed) {
+			user_btn_pressed = 0;
+			// Pressed too early, doesn't count, display warning
+			print_banner("You pressed the button too early, this doesn't count!", 10, 1);
+			continue;
+		}
+		// flash & start counting (reset timer count)
+		terminal_flash();
+		curr_time_in_mili = 0;
+		// add timeout
+		while (!user_btn_pressed);
+		user_btn_pressed = 0;
+		react_time_last = curr_time_in_mili;
+		num_trials++;
+		react_time_sum += react_time_last;
 	}
 }
 
@@ -64,12 +92,7 @@ void TIM7_IRQHandler(void) {
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
 	if (htim->Instance == TIM7) {
-		printf("TIM7 INTERRUPT\r\n");
-	    // stop timer interrupt
-	    HAL_TIM_Base_Stop_IT(&htim7);
-		// flash screen
-	    terminal_flash();
-	    // TODO use TIM6 for timeout?
+		curr_time_in_mili++;
 	}
 }
 
@@ -89,52 +112,32 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 		break;
 	case GPIO_PIN_0:
 		// USER_PB Pressed
-		// Stop Timer Interrupt
-		HAL_TIM_Base_Stop_IT(&htim7);
-		uint32_t curr_time = HAL_GetTick();
-		if (start_time == 0 || curr_time < start_time) {
-			// pressed early, does not count
-			;
-		} else {
-			// pressed after flashing, display reaction time
-			diff = start_time - curr_time;
-			total_time_diff_in_mili += diff;
-			num_trials++;
-
-			;
-		}
-
-		// After pressed, re-generate time duration for next flashing
-		gen_rand_interrupt_period();
+		user_btn_pressed = 1;
 		break;
 	default:
 		break;
 	}
-	for (int i = 0; i < 10; i++);
 }
 
 // -- Utility Functions ------
 //
-void gen_rand_interrupt_period() {
-	__HAL_TIM_SET_AUTORELOAD(&htim7, 5000);
-	HAL_TIM_Base_Start_IT(&htim7);
-}
+
 void terminal_flash() {
-	printf("terminal-flash\r\n");
-//    printf("\033[0;1;33;44m\033[2J\033[;H"); // Set background color to blue, text to yellow
-//    fflush(stdout); // Need to flush stdout after using printf that doesn't end in \n
-//	start_time = HAL_GetTick(); // set time to beginning of flashing
-//    HAL_Delay(30); // Pause for a 30ms
-//    Terminal_Init();
+    printf("\a\033[0;1;33;44m\033[2J\033[;H"); // Set background color to blue, text to yellow
+    fflush(stdout); // Need to flush stdout after using printf that doesn't end in \n
+    HAL_Delay(30); // Pause for a 30ms
+    Terminal_Init();
 }
 void erase_warning() {
 	printf("\033[2;H\033[K"); // removes invalid key warning
 	fflush(stdout);
 }
 
-void print_warning(char* msg) {
+void print_banner(char* msg, uint8_t line_num, uint8_t beep) {
+	erase_warning();
 	int padlen = (TERM_WIDTH - strlen(msg)) / 2;
-	printf("\a\033[2;H%*s%s%*s", padlen, "", msg, padlen, "");
+	if (beep) printf("\a");
+	printf("\033[%d;H%*s%s%*s", line_num, padlen, "", msg, padlen, "");
 	fflush(stdout);
 }
 
@@ -147,13 +150,13 @@ void Terminal_Init() {
 
 void Timer_Init() {
 	htim7.Instance = TIM7;
-	htim7.Init.Prescaler = (uint32_t) 108000; // 108Mhz / 108000 = 1kHz
+	htim7.Init.Prescaler = (uint32_t) 1080; // 108Mhz / 1080 = 100kHz
 	htim7.Init.CounterMode = TIM_COUNTERMODE_UP;
-	htim7.Init.Period = 5000; // 1kHz / 1000 = 1Hz
-	// Period could be from 500 ~ 5000 (0.5s to 5s)
+	htim7.Init.Period = 100; // 100kHz / 100 = 1kHz -> every 1ms
 	htim7.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
 
 	HAL_TIM_Base_Init(&htim7);
+	HAL_TIM_Base_Start_IT(&htim7);
 }
 
 void HAL_TIM_Base_MspInit(TIM_HandleTypeDef* htim) {
@@ -187,3 +190,4 @@ void Interrupt_Init() {
 	HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
 	HAL_NVIC_EnableIRQ(EXTI0_IRQn);
 }
+

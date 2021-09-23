@@ -45,7 +45,8 @@ void TIM6_DAC_IRQHandler()
 {
     TIM6->SR &= (uint16_t) ~1;    // Reset Interrupt bit
     /* Task 2 print runtime */
-    ++TIME_ELAPSED;
+	printf("%ld tenths of a second elapsed since start of program.\r", ++TIME_ELAPSED);
+	fflush(stdout);
     for (int i = 0; i < 10; i++);
 }
 
@@ -67,8 +68,6 @@ void Timer_Init( void )
     TIM6->ARR   = (uint16_t) 999;		// Every 1000 cycles is an overflow
     TIM6->EGR   |= (uint16_t) 1;        // Reinitialize timer counter and update registers
     TIM6->DIER  |= (uint16_t) 1;        // Enable Interrupts
-
-    for (int i = 0; i < 10; i++);
     TIM6->CR1   |= (uint16_t) 1;        // Start Counter
 }
 
@@ -87,9 +86,5 @@ int main(void)
     Timer_Init();       // Enable Timers
     Terminal_Init();
 
-    while(1)
-    {
-    	printf("%ld tenths of a second elapsed since start of program.\r", TIME_ELAPSED);
-    	fflush(stdout);
-    }
+    while(1);
 }
