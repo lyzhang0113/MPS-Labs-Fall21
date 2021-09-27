@@ -1,3 +1,8 @@
+// ****** IMPORTANT NOTE ******
+/*
+ * This file is only used in the process of developing,
+ * and should not be uploaded as the lab solution.
+ */
 //------------------------------------------------------------------------------------
 // task01.c
 //------------------------------------------------------------------------------------

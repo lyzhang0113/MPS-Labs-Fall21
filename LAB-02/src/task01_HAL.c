@@ -1,3 +1,9 @@
+// ****** IMPORTANT NOTE ******
+/*
+ * This file is only used to develop the HAL implementation separately,
+ * and should not be uploaded as the lab solution.
+ */
+
 // -- Imports ---------------
 //
 #include "stm32f769xx.h"

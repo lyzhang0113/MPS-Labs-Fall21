@@ -1,25 +1,25 @@
-//------------------------------------------------------------------------------------
-// task01.c
-//------------------------------------------------------------------------------------
-//
-// Test program to demonstrate serial port I/O.  This program writes a message on
-// the console using the printf() function, and reads characters using the getchar()
-// function.  An ANSI escape sequence is used to clear the screen if a '2' is typed.
-// A '1' repeats the message and the program responds to other input characters with
-// an appropriate message.
-//
-// Any valid keystroke turns on the green LED on the board; invalid entries turn it off
+//----------------------------------
+// Lab 2 - Interrupts and Timers - task01.c
+//----------------------------------
+// Objective:
+//   Build a program that responds to two External Interrupts via the signals EXTI0 and EXTI8.
+// Use one via registers, and the other via HAL.
 //
 
 /**	NOTES:
  * =======
  * Added 1 uF capacitor to help with debouncing issue!
- * Changed Rising to Falling edge
+ * Changed Rising to Falling edge to prevent triggering Interrupt at startup
  */
 
 
 /* GPIO PJ0 ---> EXTI0 */   // Register
 /* GPIO PC8 ---> EXTI8 */   // HAL
+
+//------------------------------------------------------------------------------------
+// Defines
+//------------------------------------------------------------------------------------
+#define EXTI0_HIGH (GPIOJ->IDR & 1) != 0
 
 //------------------------------------------------------------------------------------
 // Includes
@@ -30,12 +30,46 @@
 #include <stdint.h>
 
 //------------------------------------------------------------------------------------
+// Prototypes
+//------------------------------------------------------------------------------------
+void Register_Init(void);
+void GPIO_Init_HAL(void);
+void Interrupt_Init_HAL(void);
+void Terminal_Init(void);
+
+//------------------------------------------------------------------------------------
 // Global Variables
 //------------------------------------------------------------------------------------
-#define EXTI0_HIGH (GPIOJ->IDR & 1) != 0
-
+// flags
 volatile uint8_t EXTI0_DETECTED = 0;
 volatile uint8_t EXTI8_DETECTED = 0;
+
+//------------------------------------------------------------------------------------
+// MAIN Routine
+//------------------------------------------------------------------------------------
+int main(void)
+{
+    Sys_Init();         // This always goes at the top of main (defined in init.c)
+    Register_Init();    // Enable registers
+    GPIO_Init_HAL();
+    Interrupt_Init_HAL();
+
+    Terminal_Init();
+
+    while(1)
+    {
+        /* Task 1 check PB */
+    	if (EXTI0_DETECTED){
+    	    printf("GPIO Pin J0 has been triggered!\r\n");
+    	    EXTI0_DETECTED = 0;
+    	}
+		if (EXTI8_DETECTED) {
+			EXTI8_DETECTED = 0;
+			printf("GPIO C Pin 8 Pushbutton has been pressed! \r\n");
+		}
+    }
+}
+
 
 //------------------------------------------------------------------------------------
 // IRQs
@@ -56,7 +90,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 }
 
 //------------------------------------------------------------------------------------
-// Register Initialization
+// Initialization
 //------------------------------------------------------------------------------------
 void Register_Init( void )
 {
@@ -105,30 +139,4 @@ void GPIO_Init_HAL() {
 void Interrupt_Init_HAL() {
 //	HAL_NVIC_SetPriority(EXTI9_5_IRQn, 15, 0);
 	HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
-}
-
-//------------------------------------------------------------------------------------
-// MAIN Routine
-//------------------------------------------------------------------------------------
-int main(void)
-{
-    Sys_Init();         // This always goes at the top of main (defined in init.c)
-    Register_Init();    // Enable registers
-    GPIO_Init_HAL();
-    Interrupt_Init_HAL();
-
-    Terminal_Init();
-
-    while(1)
-    {
-        /* Task 1 check PB */
-    	if (EXTI0_DETECTED){
-    	    printf("GPIO Pin J0 has been triggered!\r\n");
-    	    EXTI0_DETECTED = 0;
-    	}
-		if (EXTI8_DETECTED) {
-			EXTI8_DETECTED = 0;
-			printf("GPIO C Pin 8 Pushbutton has been pressed! \r\n");
-		}
-    }
 }
