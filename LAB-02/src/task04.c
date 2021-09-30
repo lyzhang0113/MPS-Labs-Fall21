@@ -30,7 +30,7 @@ void Interrupt_Init(void);
 // Utility Functions
 void terminal_flash(void);
 void print_banner(char* msg, uint8_t line_num, uint8_t beep);
-void erase_warning(void);
+void erase_line(uint8_t line_num);
 
 //------------------------------------------------------------------------------------
 // Global Variables
@@ -140,13 +140,13 @@ void terminal_flash() {
     HAL_Delay(30); // Pause for a 30ms
     Terminal_Init();
 }
-void erase_warning() {
-	printf("\033[2;H\033[K"); // removes invalid key warning
+void erase_line(uint8_t line_num) {
+	printf("\033[%d;H\033[K", line_num); // removes invalid key warning
 	fflush(stdout);
 }
 
 void print_banner(char* msg, uint8_t line_num, uint8_t beep) {
-	erase_warning();
+	erase_line(line_num);
 	int padlen = (TERM_WIDTH - strlen(msg)) / 2;
 	if (beep) printf("\a");
 	printf("\033[%d;H%*s%s%*s", line_num, padlen, "", msg, padlen, "");
