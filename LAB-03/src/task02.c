@@ -52,6 +52,7 @@ void HAL_UART_RxCpltCallback( UART_HandleTypeDef *huart )
 void Terminal_Init( void )
 {
     uart_print(&huart1, "\033[0m\033[2J\033[;H"); // Erase screen & move cursor to home position
+    uart_print(&huart6, "\033[0m\033[2J\033[;H"); // Erase screen & move cursor to home position
 }
 
 void Interrupt_Init( void )
@@ -80,12 +81,13 @@ int main(void)
 	Sys_Init();
 	UART_Init();
 	Interrupt_Init();
-	Terminal_Init();
 
 	uint8_t ptr[1];
 
 	HAL_UART_Receive_IT(&huart1, ptr, 1);
 	HAL_UART_Receive_IT(&huart6, ptr, 1);
+
+	Terminal_Init();
 
 	while (1);
 }
