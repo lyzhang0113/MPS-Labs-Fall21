@@ -3,6 +3,11 @@
 //------------------------------------
 //
 
+/*
+ * - The board requires the grounds to be connected
+ *
+ */
+
 //------------------------------------------------------------------------------------
 // Includes
 //------------------------------------------------------------------------------------
@@ -24,6 +29,7 @@ char uart_getchar_it(UART_HandleTypeDef *huart, uint8_t echo);
 // Global Variables
 //------------------------------------------------------------------------------------
 UART_HandleTypeDef huart1, huart6;
+char in, input[1];
 
 //------------------------------------------------------------------------------------
 // Interrupt Handlers
@@ -35,13 +41,13 @@ void HAL_UART_RxCpltCallback( UART_HandleTypeDef *huart )
 	/* Receive in UART1, Transmit to UART6 */
 	if (huart->Instance == USART1)
 	{
-		char in = uart_getchar_it(&huart1, 1);
+		in = uart_getchar_it(&huart1, 1);
 		uart_putchar(&huart6, &in);
 	}
 	/* Receive in UART6, Transmit to UART1 */
-	if (huart->Instance == USART6)
+	else if (huart->Instance == USART6)
 	{
-		char in = uart_getchar_it(&huart6, 0);
+		in = uart_getchar_it(&huart6, 0);
 		uart_putchar(&huart1, &in);
 	}
 }
@@ -81,14 +87,11 @@ int main(void)
 	Sys_Init();
 	UART_Init();
 	Interrupt_Init();
+
+	uart_getchar_it(&huart1, 0);
+	uart_getchar_it(&huart6, 0);
+
 	Terminal_Init();
-
-	uint8_t ptr[1];
-
-	HAL_UART_Receive_IT(&huart1, ptr, 1);
-	uart_putchar(&huart6, ptr);
-	HAL_UART_Receive_IT(&huart6, ptr, 1);
-	uart_putchar(&huart1, ptr);
 
 	while (1);
 }
@@ -99,7 +102,6 @@ int main(void)
 // Get one character
 // 'echo' means enable (1) or disable (0) echoing of characters
 char uart_getchar_it(UART_HandleTypeDef *huart, uint8_t echo) {
-	char input[1];
 	HAL_UART_Receive_IT(huart, (uint8_t *)input, 1);
 	if (echo) HAL_UART_Transmit(huart, (uint8_t*) input, 1, 1000);
 	return (char)input[0];
