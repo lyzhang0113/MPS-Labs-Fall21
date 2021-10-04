@@ -86,9 +86,9 @@ int main(void)
 	uint8_t ptr[1];
 
 	HAL_UART_Receive_IT(&huart1, ptr, 1);
-	uart_putchar(&huart1, ptr);
-	HAL_UART_Receive_IT(&huart6, ptr, 1);
 	uart_putchar(&huart6, ptr);
+	HAL_UART_Receive_IT(&huart6, ptr, 1);
+	uart_putchar(&huart1, ptr);
 
 	while (1);
 }
