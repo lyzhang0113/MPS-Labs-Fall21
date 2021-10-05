@@ -56,7 +56,6 @@ uint8_t SPI_ReadWriteByte(SPI_HandleTypeDef* hspi, uint8_t TxData) {
 }
 
 uint8_t SPI_ReadByte(SPI_HandleTypeDef* hspi, uint32_t timeout) {
-	// HAL_StatusTypeDef HAL_SPI_Transmit(SPI_HandleTypeDef *hspi, uint8_t *pData, uint16_t Size, uint32_t Timeout)
 	uint8_t RxData;
 	HAL_SPI_Receive(hspi, &RxData, 1, timeout);
 	return RxData;

@@ -7,7 +7,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 
-void initSPI(SPI_HandleTypeDef* hspi);
+void initSPI(SPI_HandleTypeDef* hspi, SPI_TypeDef* Tgt);
 
 uint8_t SPI_ReadWriteByte(uint8_t TxData);
 
