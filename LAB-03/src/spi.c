@@ -20,7 +20,7 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef *hspi)
 		GPIO_InitStruct.Mode      = GPIO_MODE_AF_PP;
 		GPIO_InitStruct.Pull      = GPIO_NOPULL;
 		GPIO_InitStruct.Speed     = GPIO_SPEED_HIGH;
-		GPIO_InitStruct.Alternate = GPIO_AF7_SPI2;
+		GPIO_InitStruct.Alternate = GPIO_AF5_SPI2;
 
 		// Initialize SPI2_SCK (PA12)
 		GPIO_InitStruct.Pin       = GPIO_PIN_12;
@@ -40,12 +40,18 @@ void initSPI(SPI_HandleTypeDef* hspi, SPI_TypeDef* Tgt) {
 	hspi->Init.DataSize          = SPI_DATASIZE_8BIT;
 	hspi->Init.CLKPolarity       = SPI_POLARITY_HIGH;
 	hspi->Init.CLKPhase          = SPI_PHASE_2EDGE;
-	hspi->Init.NSS               = SPI_NSS_HARD_INPUT;
-	hspi->Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_128; // 108MHz / 128 = 843kHz
+	hspi->Init.NSS               = SPI_NSS_HARD_OUTPUT; // Master: Hardware Controller NSS
+	hspi->Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_64; // 108MHz / 128 = 843kHz
 	hspi->Init.FirstBit          = SPI_FIRSTBIT_MSB;
 	hspi->Init.TIMode            = SPI_TIMODE_DISABLE;
+	hspi->Init.CRCCalculation    = SPI_CRCCALCULATION_DISABLE;
+	hspi->Init.CRCPolynomial     = 7;
+	hspi->Init.CRCLength         = SPI_CRC_LENGTH_DATASIZE;
+	hspi->Init.NSSPMode          = SPI_NSS_PULSE_DISABLE;
 
 	HAL_SPI_Init(hspi);
+
+	__HAL_SPI_ENABLE(hspi);
 }
 
 // read and write 1 char at the same time since full-duplex
@@ -69,6 +75,6 @@ void SPI_WriteByte(SPI_HandleTypeDef* hspi, uint8_t TxData, uint32_t timeout) {
 	HAL_SPI_Transmit(hspi, &TxData, 1, timeout);
 }
 
-void SPI_WriteBytes(SPI_HandlTypeDef* hspi, uint8_t* TxDataBuf, uint32_t length) {
+void SPI_WriteBytes(SPI_HandleTypeDef* hspi, uint8_t* TxDataBuf, uint32_t length) {
 	HAL_SPI_Transmit(hspi, TxDataBuf, length, 1000);
 }
