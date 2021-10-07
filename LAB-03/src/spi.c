@@ -38,7 +38,7 @@ void initSPI(SPI_HandleTypeDef* hspi, SPI_TypeDef* Tgt) {
 	hspi->Init.Mode              = SPI_MODE_MASTER;
 	hspi->Init.Direction         = SPI_DIRECTION_2LINES;
 	hspi->Init.DataSize          = SPI_DATASIZE_8BIT;
-	hspi->Init.CLKPolarity       = SPI_POLARITY_HIGH;
+	hspi->Init.CLKPolarity       = SPI_POLARITY_LOW;
 	hspi->Init.CLKPhase          = SPI_PHASE_2EDGE;
 	hspi->Init.NSS               = SPI_NSS_HARD_OUTPUT; // Master: Hardware Controller NSS
 	hspi->Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_64; // 108MHz / 128 = 843kHz
@@ -51,7 +51,6 @@ void initSPI(SPI_HandleTypeDef* hspi, SPI_TypeDef* Tgt) {
 
 	HAL_SPI_Init(hspi);
 
-	__HAL_SPI_ENABLE(hspi);
 }
 
 // read and write 1 char at the same time since full-duplex
@@ -67,14 +66,18 @@ uint8_t SPI_ReadByte(SPI_HandleTypeDef* hspi, uint32_t timeout) {
 	return RxData;
 }
 
-void SPI_ReadBytes(SPI_HandleTypeDef* hspi, uint8_t* RxDataBuf, uint32_t length) {
-	HAL_SPI_Receive(hspi, RxDataBuf, length, 1000);
-}
-
 void SPI_WriteByte(SPI_HandleTypeDef* hspi, uint8_t TxData, uint32_t timeout) {
 	HAL_SPI_Transmit(hspi, &TxData, 1, timeout);
 }
 
-void SPI_WriteBytes(SPI_HandleTypeDef* hspi, uint8_t* TxDataBuf, uint32_t length) {
-	HAL_SPI_Transmit(hspi, TxDataBuf, length, 1000);
+uint8_t SPI_ReadByteFromReg(SPI_HandleTypeDef* hspi, uint8_t reg) {
+	uint8_t RxData;
+	HAL_SPI_Transmit(hspi, &reg, 1, 1000);
+	HAL_SPI_Receive(hspi, &RxData, 1, 1000);
+	return RxData;
+}
+
+void SPI_WriteByteToReg(SPI_HandleTypeDef* hspi, uint8_t reg, uint8_t TxData) {
+	HAL_SPI_Transmit(hspi, &reg, 1, 1000);
+	HAL_SPI_Transmit(hspi, &TxData, 1, 1000);
 }
