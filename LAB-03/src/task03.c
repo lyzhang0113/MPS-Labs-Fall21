@@ -4,7 +4,7 @@
 // Objective:
 //
 //
-
+#define TERM_HEIGHT 24
 
 #include "init.h"
 #include "spi.h"
@@ -30,7 +30,24 @@ uint8_t rx_uart = 0, rx_spi, tx;
 //------------------------------------------------------------------------------------
 void TerminalInit( void )
 {
+	// Clear and set attributes
 	printf("\033[0m\033[2J\033[;H");
+	fflush(stdout);
+
+	// Set up UART half of terminal
+	printf("\033[4;0H\033[2KReceived from UART: ");
+	fflush(stdout);
+
+	// Set up SPI half """
+	printf("\033[14;0H\033[2KReceived from SPI: ");
+	fflush(stdout);
+
+	// Set up scrolling area
+	printf("\033[2;3r");
+	fflush(stdout);
+
+	// Set up "history" area
+	printf("\033[HCharacter History:\r\n\033[s");
 	fflush(stdout);
 }
 
@@ -53,16 +70,14 @@ int main(void) {
 
 	while (1)
 	{
-		printf("\033[H\033[2K");
-		fflush(stdout);
+		rx_uart = uart_getchar_with_timeout(&huart1, 1, 10);	// Read keyboard
+		if (!rx_uart) continue;		// Only alter terminal on input
+		printf("\033[4;20H %c\n", rx_uart);	// Print in UART area
 
-		rx_uart = uart_getchar_with_timeout(&huart1, 1, 10);
-		if (!rx_uart) continue;
-		printf("\033[2;0H\033[2KReceived from UART: %c", rx_uart);
-		fflush(stdout);
+		rx_spi 	= SPI_ReadWriteByte(&hspi2, rx_uart);	// R/W to/from SPI
+		printf("\033[14;20H%c\n", rx_spi);	// Print in SPI area
 
-		rx_spi 	= SPI_ReadWriteByte(&hspi2, rx_uart);
-		printf("\033[3;0H\033[2KReceived from SPI: %c", rx_spi);
+		printf("\033[u %c\033[s", rx_uart);	// Print char to history bank
 		fflush(stdout);
 
 		HAL_Delay(10);
