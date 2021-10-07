@@ -3,6 +3,9 @@
  * This is called upon SPI initialization. It handles the configuration
  * of the GPIO pins for SPI.
  */
+
+volatile uint32_t curr_time_in_micro = 0;
+
  // Do NOT change the name of an MspInit function; it needs to override a
  // __weak function of the same name. It does not need a prototype in the header.
 void HAL_SPI_MspInit(SPI_HandleTypeDef *hspi)
@@ -61,6 +64,22 @@ void initSPI(SPI_HandleTypeDef* hspi, SPI_TypeDef* Tgt) {
 
 }
 
+
+void TIM7_IRQHandler(void) {
+	HAL_TIM_IRQHandler(&htim7);
+}
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
+	if (htim->Instance == TIM7) {
+		curr_time_in_micro++;
+	}
+}
+
+void wait_us(uint32_t us) {
+	curr_time_in_micro = 0;
+	while (curr_time_in_micro < us) ;
+}
+
 // read and write 1 char at the same time since full-duplex
 uint8_t SPI_ReadWriteByte(SPI_HandleTypeDef* hspi, uint8_t TxData) {
 	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_11, GPIO_PIN_RESET);
@@ -85,3 +104,27 @@ void SPI_WriteByte(SPI_HandleTypeDef* hspi, uint8_t TxData, uint32_t timeout) {
 	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_11, GPIO_PIN_SET);
 }
 
+uint8_t SPI_ReadByteFromReg(SPI_HandleTypeDef* hspi, uint8_t reg) {
+	uint8_t RxData;
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_11, GPIO_PIN_RESET);
+	wait_us(10);
+	HAL_SPI_Transmit(hspi, &reg, 1, 1000);
+	wait_us(20);
+	HAL_SPI_Receive(hspi, &RxData, 1, 1000);
+	wait_us(10);
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_11, GPIO_PIN_SET);
+	wait_us(10);
+	return RxData;
+}
+
+void SPI_WriteByteToReg(SPI_HandleTypeDef* hspi, uint8_t reg, uint8_t data) {
+	uint8_t RxData;
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_11, GPIO_PIN_RESET);
+	wait_us(10);
+	HAL_SPI_Transmit(hspi, &reg, 1, 1000);
+	wait_us(20);
+	HAL_SPI_Transmit(hspi, &data, 1, 1000);
+	wait_us(10);
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_11, GPIO_PIN_SET);
+	wait_us(10);
+}

@@ -13,8 +13,7 @@ void Timer_Init();
 uint8_t SPI_ReadByteFromReg(SPI_HandleTypeDef* hspi, uint8_t reg);
 void SPI_WriteByteToReg(SPI_HandleTypeDef* hspi, uint8_t reg, uint8_t data);
 
-volatile uint32_t curr_time_in_micro = 0;
-TIM_HandleTypeDef htim7;
+
 SPI_HandleTypeDef hspi2;
 
 int main(void) {
@@ -72,16 +71,6 @@ int main(void) {
 	printf("Temp: %dC\r\n", temp);
 }
 
-void TIM7_IRQHandler(void) {
-	HAL_TIM_IRQHandler(&htim7);
-}
-
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
-	if (htim->Instance == TIM7) {
-		curr_time_in_micro++;
-	}
-}
-
 void Terminal_Init() {
     printf("\033[0m\033[2J\033[;H"); // Erase screen & move cursor to home position
     fflush(stdout); // Need to flush stdout after using printf that doesn't end in \n
@@ -89,9 +78,9 @@ void Terminal_Init() {
 
 void Timer_Init() {
 	htim7.Instance = TIM7;
-	htim7.Init.Prescaler = (uint32_t) 108; // 108Mhz / 1080 = 100kHz
+	htim7.Init.Prescaler = (uint32_t) 108; // 108Mhz / 108 = 1MHz
 	htim7.Init.CounterMode = TIM_COUNTERMODE_UP;
-	htim7.Init.Period = 1; // 100kHz / 100 = 1kHz -> every 1ms
+	htim7.Init.Period = 1; // 1MHz / 1 = 1MHz -> every 1us
 	htim7.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
 
 	HAL_TIM_Base_Init(&htim7);
@@ -123,32 +112,5 @@ uint16_t read_temp() {
 	return temp_raw;
 }
 
-void wait_us(uint32_t us) {
-	curr_time_in_micro = 0;
-	while (curr_time_in_micro < us) ;
-}
 
-uint8_t SPI_ReadByteFromReg(SPI_HandleTypeDef* hspi, uint8_t reg) {
-	uint8_t RxData;
-	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_11, GPIO_PIN_RESET);
-	wait_us(10);
-	HAL_SPI_Transmit(hspi, &reg, 1, 1000);
-	wait_us(20);
-	HAL_SPI_Receive(hspi, &RxData, 1, 1000);
-	wait_us(10);
-	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_11, GPIO_PIN_SET);
-	wait_us(10);
-	return RxData;
-}
 
-void SPI_WriteByteToReg(SPI_HandleTypeDef* hspi, uint8_t reg, uint8_t data) {
-	uint8_t RxData;
-	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_11, GPIO_PIN_RESET);
-	wait_us(10);
-	HAL_SPI_Transmit(hspi, &reg, 1, 1000);
-	wait_us(20);
-	HAL_SPI_Transmit(hspi, &data, 1, 1000);
-	wait_us(10);
-	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_11, GPIO_PIN_SET);
-	wait_us(10);
-}
