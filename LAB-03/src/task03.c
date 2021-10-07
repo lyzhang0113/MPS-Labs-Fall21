@@ -80,8 +80,7 @@ int main(void) {
 		printf("\033[u %c\033[s", rx_uart);	// Print char to history bank
 		fflush(stdout);
 
-		HAL_Delay(10);
+		HAL_Delay(1);
 	}
 }
-
 
