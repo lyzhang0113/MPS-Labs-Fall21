@@ -29,6 +29,14 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef *hspi)
 		// Initialize SPI2_MISO (PB14) and SPI2_MOSI (PB15)
 		GPIO_InitStruct.Pin       = GPIO_PIN_14 | GPIO_PIN_15;
 		HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+		// NSS
+		GPIO_InitStruct.Mode      = GPIO_MODE_OUTPUT_PP;
+		GPIO_InitStruct.Pull      = GPIO_PULLDOWN;
+		GPIO_InitStruct.Pin       = GPIO_PIN_11;
+		HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+//
+		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_11, GPIO_PIN_SET);
 	}
 }
 
@@ -40,8 +48,8 @@ void initSPI(SPI_HandleTypeDef* hspi, SPI_TypeDef* Tgt) {
 	hspi->Init.DataSize          = SPI_DATASIZE_8BIT;
 	hspi->Init.CLKPolarity       = SPI_POLARITY_LOW;
 	hspi->Init.CLKPhase          = SPI_PHASE_2EDGE;
-	hspi->Init.NSS               = SPI_NSS_HARD_OUTPUT; // Master: Hardware Controller NSS
-	hspi->Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_64; // 108MHz / 128 = 843kHz
+	hspi->Init.NSS               = SPI_NSS_SOFT; // Master: Hardware Controller NSS
+	hspi->Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_128; // 108MHz / 128 = 843kHz
 	hspi->Init.FirstBit          = SPI_FIRSTBIT_MSB;
 	hspi->Init.TIMode            = SPI_TIMODE_DISABLE;
 	hspi->Init.CRCCalculation    = SPI_CRCCALCULATION_DISABLE;
@@ -55,29 +63,25 @@ void initSPI(SPI_HandleTypeDef* hspi, SPI_TypeDef* Tgt) {
 
 // read and write 1 char at the same time since full-duplex
 uint8_t SPI_ReadWriteByte(SPI_HandleTypeDef* hspi, uint8_t TxData) {
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_11, GPIO_PIN_RESET);
 	uint8_t RxData;
 	HAL_SPI_TransmitReceive(hspi, &TxData, &RxData, 1, 1000);
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_11, GPIO_PIN_SET);
 	return RxData;
 }
 
 uint8_t SPI_ReadByte(SPI_HandleTypeDef* hspi, uint32_t timeout) {
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_11, GPIO_PIN_RESET);
 	uint8_t RxData;
 	HAL_SPI_Receive(hspi, &RxData, 1, timeout);
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_11, GPIO_PIN_SET);
+	HAL_Delay(1);
 	return RxData;
 }
 
 void SPI_WriteByte(SPI_HandleTypeDef* hspi, uint8_t TxData, uint32_t timeout) {
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_11, GPIO_PIN_RESET);
 	HAL_SPI_Transmit(hspi, &TxData, 1, timeout);
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_11, GPIO_PIN_SET);
 }
 
-uint8_t SPI_ReadByteFromReg(SPI_HandleTypeDef* hspi, uint8_t reg) {
-	uint8_t RxData;
-	HAL_SPI_Transmit(hspi, &reg, 1, 1000);
-	HAL_SPI_Receive(hspi, &RxData, 1, 1000);
-	return RxData;
-}
-
-void SPI_WriteByteToReg(SPI_HandleTypeDef* hspi, uint8_t reg, uint8_t TxData) {
-	HAL_SPI_Transmit(hspi, &reg, 1, 1000);
-	HAL_SPI_Transmit(hspi, &TxData, 1, 1000);
-}
