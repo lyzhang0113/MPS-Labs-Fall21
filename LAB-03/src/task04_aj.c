@@ -27,6 +27,8 @@ int main(void) {
 	initSPI(&hspi2, SPI2);
 	HAL_Delay(100);
 
+	initUart(&huart1, 115200, USART1);
+
 	while (1) {
 		rx_uart = uart_getchar_with_timeout(&huart1, 1, 10);	// Read keyboard
 		if (!rx_uart) continue;		// Only alter terminal on input
@@ -34,11 +36,6 @@ int main(void) {
 
 		rx_spi 	= SPI_ReadWriteByte(&hspi2, rx_uart);	// R/W to/from SPI
 		printf("\033[14;0H SPI: %c\n", rx_spi);	// Print in SPI area
-
-		printf("\033[u %c\033[s", rx_uart);	// Print char to history bank
-		fflush(stdout);
-
-		HAL_Delay(1);
 	}
 }
 
