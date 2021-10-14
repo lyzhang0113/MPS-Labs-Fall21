@@ -2,8 +2,15 @@
 // Lab 3 - Part 4: SPI - task04.c
 //----------------------------------
 //
+#define TERM_WIDTH 80
+#define TERM_HEIGHT 24
 
 #define ESC 0x1B
+#define MODE2_READ_TERM 0x32
+#define MODE3_READ_VERSION 0x33
+#define MODE4_READ_TEMP 0x34
+#define MODE5_CLR_TERM 0x35
+#define MODE6_CHG_DEVID 0x36
 
 #include "init.h"
 #include "uart.h"
@@ -11,6 +18,7 @@
 #include <stdio.h>
 
 void Terminal_Init();
+void print_banner(char* msg, uint8_t line_num, uint8_t beep);
 void Timer_Init();
 
 
@@ -46,58 +54,86 @@ int main(void) {
 	status = SPI_ReadByteFromReg(&hspi2, 0x01);
 	printf("\r\nInitialized, Device Status: %d\r\n", status);
 
-	print_version();
-	SPI_WriteByteToReg(&hspi2, 0x00, 0x02);
-
 	while (1) {
-		// Read Device Status
-		uint8_t status = SPI_ReadByteFromReg(&hspi2, 0x01);
-		// if new temp available, read it
-		if (status & (uint8_t) 1 << 3) {
-			read_temp();
-		}
+//		// Read Device Status
+//		uint8_t status = SPI_ReadByteFromReg(&hspi2, 0x01);
+//		// if new temp available, read it
+//		if (status & (uint8_t) 1 << 3) {
+//			read_temp();
+//		}
 
 		rx_uart = uart_getchar_with_timeout(&huart1, 1, 10);	// Read keyboard
+
 		if (rx_uart) {
-			printf("\033[4;0HUART: %c\n", rx_uart);	// Print in UART area
-			SPI_WriteByte(&hspi2, rx_uart, 100);	// W to SPI
-			fflush(stdout);
+			switch (rx_uart) {
+			case ESC:
+	        	Terminal_Init();
+	        	printf("Please Select Mode: \r\n");
+	        	printf("    2. Receive char from the peripheral using SPI\r\n");
+	        	printf("    3. Print peripheral firmware version\r\n");
+	        	printf("    4. Trigger & Print temperature reading\r\n");
+	        	printf("    5. Clear peripheral terminal\r\n");
+	        	printf("    6. Change device ID\r\n\n");
+	        	fflush(stdout);
+
+	        	switch(getchar()) {
+	        	case MODE2_READ_TERM:
+	        		Terminal_Init();
+	        		print_banner("You've Entered Mode 2 - Receive From Peripheral Terminal", 2, 0);
+	        		print_banner("To EXIT, Enter <ESC> on Either Terminal", 23, 0);
+	        		while (1) {
+	        			rx_spi = SPI_ReadByteFromReg(&hspi2, 0x05); // Read from SPI
+	        			if (!rx_spi) continue;
+	        			printf("\033[14;0HCharacters Received From SPI: %c\n", rx_spi);	// Print in SPI area
+	        			fflush(stdout);
+	        			if (rx_spi == ESC || uart_getchar_with_timeout(&huart1, 1, 10) == ESC) break;
+	        		}
+	        		break;
+	        	case MODE3_READ_VERSION:
+	        		Terminal_Init();
+	        		print_banner("You've Entered Mode 3 - Read Peripheral Version", 2, 0);
+	        		print_banner("<Press Enter to Continue>", 23, 0);
+	        		printf("\033[5;0H");
+	        		print_version();
+	        		getchar();
+	        		break;
+	        	case MODE4_READ_TEMP:
+	        		Terminal_Init();
+	        		print_banner("You've Entered Mode 4 - Trigger & Read Peripheral Temperature", 2, 0);
+	        		// Trigger
+	        		// Keep Reading until Ready
+	        		// Read Temp
+	        		// Print
+	        		print_temp();
+	        		break;
+	        	case MODE5_CLR_TERM:
+	        		Terminal_Init();
+	        		print_banner("You've Entered Mode 5 - Clear Peripheral Terminal", 2, 0);
+	        		reset_peri_term();
+	        		break;
+	        	case MODE6_CHG_DEVID:
+	        		Terminal_Init();
+	        		print_banner("You've Entered Mode 6 - Change Peripheral Device ID", 2, 0);
+	        		printf("\033[4;0HPlease enter the device ID desired (char): ");
+	        		fflush(stdout);
+	        		change_peri_device_id(getchar());
+	        		break;
+	        	}
+	        	break;
+			default:
+	            // Send character to Peripheral
+				printf("\033[4;0HCharacters Entered To UART: %c\n", rx_uart);	// Print in UART area
+				fflush(stdout);
+				SPI_WriteByteToReg(&hspi2, 0x05, rx_uart); // W to SPI
+				break;
+			}
 		}
 
-        if (rx_uart == ESC) { // halt on ESC or CTL+[
-        	Terminal_Init();
-        	printf("Please Select Mode: \r\n");
-        	printf("    2. Receive char from the peripheral using SPI\r\n");
-        	printf("    3. Print peripheral firmware version\r\n");
-        	printf("    4. Print temperature reading\r\n");
-        	printf("    5. Clear peripheral terminal\r\n");
-        	printf("    6. Change device ID\r\n\n");
-        	fflush(stdout);
-
-        	switch(getchar()) {
-        	case 0x32:
-        		while (1) {
-        			rx_spi 	= SPI_ReadByte(&hspi2, 1000);	// R/W to/from SPI
-        			printf("\033[14;0H SPI: %c\n", rx_spi);	// Print in SPI area
-        			if (rx_spi == ESC || uart_getchar_with_timeout(&huart1, 1, 10) == ESC) break;
-        		}
-        		break;
-        	case 0x33:
-        		print_version();
-        		break;
-        	case 0x34:
-        		print_temp();
-        		break;
-        	case 0x35:
-        		reset_peri_term();
-        		break;
-        	case 0x36:
-        		printf("Please enter the device ID desired (char): ");
-        		fflush(stdout);
-        		change_peri_device_id(getchar());
-        		break;
-        	}
-        }
+		if (rx_spi) {
+            // Send character to Peripheral
+			printf("\033[13;0HCharacters Received From SPI: %c\n", rx_spi);	// Print in UART area
+			fflush(stdout);
+		}
 
 	}
 
@@ -106,6 +142,14 @@ int main(void) {
 void Terminal_Init() {
     printf("\033[0m\033[2J\033[;H"); // Erase screen & move cursor to home position
     fflush(stdout); // Need to flush stdout after using printf that doesn't end in \n
+}
+
+void print_banner(char* msg, uint8_t line_num, uint8_t beep) {
+	erase_line(line_num);
+	int padlen = (TERM_WIDTH - strlen(msg)) / 2;
+	if (beep) printf("\a");
+	printf("\033[%d;H%*s%s%*s", line_num, padlen, "", msg, padlen, "");
+	fflush(stdout);
 }
 
 void Timer_Init() {
