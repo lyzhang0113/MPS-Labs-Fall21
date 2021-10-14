@@ -149,8 +149,6 @@ int main(void) {
 	        		change_peri_device_id(devid);
 					print_banner("<Press Enter to Continue>", 23, 0);
 					getchar();
-					Terminal_Init();
-					print_banner("Enter any character to send to the peripheral using SPI", 2, 0);
 	        		break;
 	        	default:
 	        		Terminal_Init();
