@@ -56,6 +56,8 @@ int main(void) {
 	printf("\r\nInitialized, Device Status: %d\r\n", status);
 	print_banner("<Press Enter to Continue>", 6, 0);
 	getchar();
+	Terminal_Init();
+	print_banner("Enter any character to send to the peripheral using SPI", 2, 0);
 
 	while (1) {
 		rx_uart = uart_getchar_with_timeout(&huart1, 1, 10);	// Read keyboard
@@ -92,7 +94,10 @@ int main(void) {
 	        			rx_spi = SPI_ReadByteFromReg(&hspi2, 0x05); // Read from SPI
 	        			printf("\033[14;0HCharacters Received From SPI: %c\n", rx_spi);	// Print in SPI area
 	        			fflush(stdout);
+	        			rx_spi = 0x00;
 	        		}
+	        		Terminal_Init();
+	        		print_banner("Enter any character to send to the peripheral using SPI", 2, 0);
 	        		break;
 	        	case MODE3_READ_VERSION:
 	        		Terminal_Init();
@@ -101,6 +106,8 @@ int main(void) {
 	        		printf("\033[5;0H");
 	        		print_version();
 	        		getchar();
+	        		Terminal_Init();
+	        		print_banner("Enter any character to send to the peripheral using SPI", 2, 0);
 	        		break;
 	        	case MODE4_READ_TEMP:
 	        		// Trigger Temp Reading
@@ -119,6 +126,8 @@ int main(void) {
 					printf("\033[5;0HTemperature Reading: %d(raw)   --->   %fC\r\n", temp, temp_c);
 					print_banner("<Press Enter to Continue>", 23, 0);
 					getchar();
+					Terminal_Init();
+					print_banner("Enter any character to send to the peripheral using SPI", 2, 0);
 					break;
 	        	case MODE5_CLR_TERM:
 	        		Terminal_Init();
@@ -127,6 +136,8 @@ int main(void) {
 	        		print_banner("Peripheral's Terminal Has Been CLEARD!", 5, 0);
 					print_banner("<Press Enter to Continue>", 23, 0);
 					getchar();
+					Terminal_Init();
+					print_banner("Enter any character to send to the peripheral using SPI", 2, 0);
 	        		break;
 	        	case MODE6_CHG_DEVID:
 	        		Terminal_Init();
@@ -138,6 +149,13 @@ int main(void) {
 	        		change_peri_device_id(devid);
 					print_banner("<Press Enter to Continue>", 23, 0);
 					getchar();
+					Terminal_Init();
+					print_banner("Enter any character to send to the peripheral using SPI", 2, 0);
+	        		break;
+	        	default:
+	        		Terminal_Init();
+	        		print_banner("Undefined Mode!", 2, 0);
+	        		print_banner("Enter any character to send to the peripheral using SPI", 2, 0);
 	        		break;
 	        	}
 	        	break;
@@ -146,16 +164,10 @@ int main(void) {
 				printf("\033[4;0HCharacters Entered To UART: %c\n", rx_uart);	// Print in UART area
 				fflush(stdout);
 				SPI_WriteByteToReg(&hspi2, 0x05, rx_uart); // W to SPI
+				rx_uart = 0x00;
 				break;
 			}
 		}
-
-		if (rx_spi) {
-            // Send character to Peripheral
-			printf("\033[13;0HCharacters Received From SPI: %c\n", rx_spi);	// Print in UART area
-			fflush(stdout);
-		}
-
 	}
 
 }
