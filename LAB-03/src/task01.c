@@ -2,12 +2,18 @@
 // Lab 3 - Serial Communication - task01.c
 //----------------------------------
 // Objective:
-//
+//	Two-Terminal UART (Polling), connect UART 6 between two DISCO boards.
+//  Forward any character received in USB UART (UART1) to UART6,
+//  and forward any character received in UART6 to USB UART(UART1).
 //
 
+/* UART6 Ports */
 // USART6_RX PC7 ARD_D0
 // USART6_TX PC6 ARD_D1
 
+//------------------------------------------------------------------------------------
+// Includes
+//------------------------------------------------------------------------------------
 #include "init.h"
 
 //------------------------------------------------------------------------------------

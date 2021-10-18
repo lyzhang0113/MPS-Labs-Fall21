@@ -1,7 +1,14 @@
 //----------------------------------
-// Lab 3 - Part 4: SPI - task04.c
+// Lab 3 - Serial Communication - task04.c
 //----------------------------------
+// Objective:
+//	Make a connection to the Nucleo Board using SPI, and perform some read/write operations
+//  using SPI to complete various tasks.
 //
+
+//------------------------------------------------------------------------------------
+// Defines
+//------------------------------------------------------------------------------------
 #define TERM_WIDTH 80
 #define TERM_HEIGHT 24
 
@@ -12,30 +19,35 @@
 #define MODE5_CLR_TERM 0x35
 #define MODE6_CHG_DEVID 0x36
 
+//------------------------------------------------------------------------------------
+// Includes
+//------------------------------------------------------------------------------------
 #include "init.h"
 #include "uart.h"
 #include "spi.h"
 #include <stdio.h>
 
+//------------------------------------------------------------------------------------
+// Prototypes
+//------------------------------------------------------------------------------------
 void Terminal_Init();
 void erase_line(uint8_t line_num);
 void print_banner(char* msg, uint8_t line_num, uint8_t beep);
-void Timer_Init();
-
 
 char uart_getchar_with_timeout(UART_HandleTypeDef *huart, uint8_t echo, uint32_t timeout);
-void read_temp();
-void print_temp();
-void print_version();
-void reset_peri_term();
-void change_peri_device_id(uint8_t id);
 
+//------------------------------------------------------------------------------------
+// Global Variables
+//------------------------------------------------------------------------------------
 UART_HandleTypeDef huart1;
 SPI_HandleTypeDef hspi2;
 
 uint8_t rx_uart, rx_spi, terminate, devid;
 volatile uint16_t temp;
 
+//------------------------------------------------------------------------------------
+// MAIN Routine
+//------------------------------------------------------------------------------------
 int main(void) {
 	Sys_Init();
 	Timer_Init();
@@ -104,7 +116,9 @@ int main(void) {
 	        		print_banner("You've Entered Mode 3 - Read Peripheral Version", 2, 0);
 	        		print_banner("<Press Enter to Continue>", 23, 0);
 	        		printf("\033[5;0H");
-	        		print_version();
+	        		uint8_t major_version = SPI_ReadByteFromReg(&hspi2, (uint8_t) 0x07);
+	        		uint8_t minor_version = SPI_ReadByteFromReg(&hspi2, (uint8_t) 0x08);
+	        		printf("Firmware Version: %d.%d\r\n", major_version, minor_version);
 	        		getchar();
 	        		Terminal_Init();
 	        		print_banner("Enter any character to send to the peripheral using SPI", 2, 0);
@@ -132,7 +146,7 @@ int main(void) {
 	        	case MODE5_CLR_TERM:
 	        		Terminal_Init();
 	        		print_banner("You've Entered Mode 5 - Clear Peripheral Terminal", 2, 0);
-	        		reset_peri_term();
+	        		SPI_WriteByteToReg(&hspi2, 0x00, (uint8_t) 1 << 3);
 	        		print_banner("Peripheral's Terminal Has Been CLEARD!", 5, 0);
 					print_banner("<Press Enter to Continue>", 23, 0);
 					getchar();
@@ -146,7 +160,10 @@ int main(void) {
 	        		printf("\033[5;0HPlease enter the device ID desired (char): ");
 	        		fflush(stdout);
 	        		scanf("%d", &devid);
-	        		change_peri_device_id(devid);
+	        		SPI_WriteByteToReg(&hspi2, 0x00, (uint8_t) 1 << 7);
+	        		SPI_WriteByteToReg(&hspi2, 0x09, devid);
+	        		devid = SPI_ReadByteFromReg(&hspi2, 0x09);
+	        		printf("\r\nThe Device ID has been set to %d\r\n", devid);
 					print_banner("<Press Enter to Continue>", 23, 0);
 					getchar();
 	        		break;
@@ -170,6 +187,10 @@ int main(void) {
 
 }
 
+
+//------------------------------------------------------------------------------------
+// Utility Functions
+//------------------------------------------------------------------------------------
 void Terminal_Init() {
     printf("\033[0m\033[2J\033[;H"); // Erase screen & move cursor to home position
     fflush(stdout); // Need to flush stdout after using printf that doesn't end in \n
@@ -186,52 +207,6 @@ void print_banner(char* msg, uint8_t line_num, uint8_t beep) {
 	if (beep) printf("\a");
 	printf("\033[%d;H%*s%s%*s", line_num, padlen, "", msg, padlen, "");
 	fflush(stdout);
-}
-
-void Timer_Init() {
-	htim7.Instance = TIM7;
-	htim7.Init.Prescaler = (uint32_t) 108; // 108Mhz / 108 = 1MHz
-	htim7.Init.CounterMode = TIM_COUNTERMODE_UP;
-	htim7.Init.Period = 1; // 1MHz / 1 = 1MHz -> every 1us
-	htim7.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-
-	HAL_TIM_Base_Init(&htim7);
-	HAL_TIM_Base_Start_IT(&htim7);
-}
-
-void HAL_TIM_Base_MspInit(TIM_HandleTypeDef* htim) {
-	__HAL_RCC_TIM7_CLK_ENABLE();
-//	HAL_NVIC_SetPriority(TIM7_IRQn, 1, 3);
-	HAL_NVIC_EnableIRQ(TIM7_IRQn);
-}
-
-
-void read_temp() {
-	temp = SPI_ReadByteFromReg(&hspi2, (uint8_t) 0x04) << 8;
-	temp |= SPI_ReadByteFromReg(&hspi2, (uint8_t) 0x03);
-	SPI_WriteByteToReg(&hspi2, 0x00, 0x02);
-}
-
-void print_temp() {
-	float temp_c = 357.6 - 0.187 * temp;
-	printf("Temperature Reading: %d(raw)   --->   %fC\r\n", temp, temp_c);
-}
-
-void print_version() {
-	uint8_t major_version = SPI_ReadByteFromReg(&hspi2, (uint8_t) 0x07);
-	uint8_t minor_version = SPI_ReadByteFromReg(&hspi2, (uint8_t) 0x08);
-	printf("Firmware Version: %d.%d\r\n", major_version, minor_version);
-}
-
-void reset_peri_term() {
-	SPI_WriteByteToReg(&hspi2, 0x00, (uint8_t) 1 << 3);
-}
-
-void change_peri_device_id(uint8_t id) {
-	SPI_WriteByteToReg(&hspi2, 0x00, (uint8_t) 1 << 7);
-	SPI_WriteByteToReg(&hspi2, 0x09, id);
-	id = SPI_ReadByteFromReg(&hspi2, 0x09);
-	printf("\r\nThe Device ID has been set to %d\r\n", id);
 }
 
 char uart_getchar_with_timeout(UART_HandleTypeDef *huart, uint8_t echo, uint32_t timeout) {

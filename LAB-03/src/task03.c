@@ -1,11 +1,17 @@
 //----------------------------------
-// Lab 3 - task03.c
+// Lab 3 - Serial Communication - task03.c
 //----------------------------------
-// Objective:
+// Objective: Transmit to and Receive from SPI in loopback configuration.
 //
-//
+
+//------------------------------------------------------------------------------------
+// Defines
+//------------------------------------------------------------------------------------
 #define TERM_HEIGHT 24
 
+//------------------------------------------------------------------------------------
+// Includes
+//------------------------------------------------------------------------------------
 #include "init.h"
 #include "spi.h"
 #include "uart.h"
@@ -24,6 +30,32 @@ uint8_t uart_getchar_with_timeout(UART_HandleTypeDef *huart, uint8_t echo, uint3
 SPI_HandleTypeDef hspi2;
 UART_HandleTypeDef huart1;
 uint8_t rx_uart = 0, rx_spi, tx;
+
+//------------------------------------------------------------------------------------
+// MAIN Routine
+//------------------------------------------------------------------------------------
+int main(void) {
+	// Initialize the system
+	Sys_Init();
+	TerminalInit();
+	initSPI(&hspi2, SPI2);
+	initUart(&huart1, 115200, USART1);
+
+	while (1)
+	{
+		rx_uart = uart_getchar_with_timeout(&huart1, 1, 10);	// Read keyboard
+		if (!rx_uart) continue;		// Only alter terminal on input
+		printf("\033[4;20H %c\n", rx_uart);	// Print in UART area
+
+		rx_spi 	= SPI_ReadWriteByte(&hspi2, rx_uart);	// R/W to/from SPI
+		printf("\033[14;20H%c\n", rx_spi);	// Print in SPI area
+
+		printf("\033[u %c\033[s", rx_uart);	// Print char to history bank
+		fflush(stdout);
+
+		HAL_Delay(1);
+	}
+}
 
 //------------------------------------------------------------------------------------
 // Utility Functions
@@ -57,30 +89,3 @@ uint8_t uart_getchar_with_timeout(UART_HandleTypeDef *huart, uint8_t echo, uint3
 	if (echo) HAL_UART_Transmit(huart, (uint8_t*) input, 1, 1000);
 	return (uint8_t)input[0];
 }
-
-//------------------------------------------------------------------------------------
-// MAIN Routine
-//------------------------------------------------------------------------------------
-int main(void) {
-	// Initialize the system
-	Sys_Init();
-	TerminalInit();
-	initSPI(&hspi2, SPI2);
-	initUart(&huart1, 115200, USART1);
-
-	while (1)
-	{
-		rx_uart = uart_getchar_with_timeout(&huart1, 1, 10);	// Read keyboard
-		if (!rx_uart) continue;		// Only alter terminal on input
-		printf("\033[4;20H %c\n", rx_uart);	// Print in UART area
-
-		rx_spi 	= SPI_ReadWriteByte(&hspi2, rx_uart);	// R/W to/from SPI
-		printf("\033[14;20H%c\n", rx_spi);	// Print in SPI area
-
-		printf("\033[u %c\033[s", rx_uart);	// Print char to history bank
-		fflush(stdout);
-
-		HAL_Delay(1);
-	}
-}
-

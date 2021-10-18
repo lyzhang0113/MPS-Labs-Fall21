@@ -1,13 +1,22 @@
+//----------------------------------
+// Lab 3 - Serial Communication - spi.c
+//----------------------------------
+//
+// Helper functions for SPI
+
+
 #include "spi.h"
+
+//------------------------------------------------------------------------------------
+// Global Variables
+//------------------------------------------------------------------------------------
+TIM_HandleTypeDef htim7;
+volatile uint32_t curr_time_in_micro = 0;
+
 /*
  * This is called upon SPI initialization. It handles the configuration
  * of the GPIO pins for SPI.
  */
-
-volatile uint32_t curr_time_in_micro = 0;
-
- // Do NOT change the name of an MspInit function; it needs to override a
- // __weak function of the same name. It does not need a prototype in the header.
 void HAL_SPI_MspInit(SPI_HandleTypeDef *hspi)
 {
 	// SPI GPIO initialization structure here
@@ -33,17 +42,17 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef *hspi)
 		GPIO_InitStruct.Pin       = GPIO_PIN_14 | GPIO_PIN_15;
 		HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-		// NSS
+		// Software NSS (PA11)
 		GPIO_InitStruct.Mode      = GPIO_MODE_OUTPUT_PP;
 		GPIO_InitStruct.Pull      = GPIO_PULLDOWN;
 		GPIO_InitStruct.Pin       = GPIO_PIN_11;
 		HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-//
+
 		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_11, GPIO_PIN_SET);
 	}
 }
 
-// SPI Initialization
+
 void initSPI(SPI_HandleTypeDef* hspi, SPI_TypeDef* Tgt) {
 	hspi->Instance               = Tgt;
 	hspi->Init.Mode              = SPI_MODE_MASTER;
@@ -51,7 +60,7 @@ void initSPI(SPI_HandleTypeDef* hspi, SPI_TypeDef* Tgt) {
 	hspi->Init.DataSize          = SPI_DATASIZE_8BIT;
 	hspi->Init.CLKPolarity       = SPI_POLARITY_LOW;
 	hspi->Init.CLKPhase          = SPI_PHASE_2EDGE;
-	hspi->Init.NSS               = SPI_NSS_SOFT; // Master: Hardware Controller NSS
+	hspi->Init.NSS               = SPI_NSS_SOFT; // Master: Software Controller NSS (GPIO A11)
 	hspi->Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_128; // 108MHz / 128 = 843kHz
 	hspi->Init.FirstBit          = SPI_FIRSTBIT_MSB;
 	hspi->Init.TIMode            = SPI_TIMODE_DISABLE;
@@ -61,9 +70,29 @@ void initSPI(SPI_HandleTypeDef* hspi, SPI_TypeDef* Tgt) {
 	hspi->Init.NSSPMode          = SPI_NSS_PULSE_DISABLE;
 
 	HAL_SPI_Init(hspi);
-
 }
 
+//------------------------------------------------------------------------------------
+// Timer 7 Functions (for the 10us delay between transmitting/receiving)
+//------------------------------------------------------------------------------------
+
+
+void HAL_TIM_Base_MspInit(TIM_HandleTypeDef* htim) {
+	__HAL_RCC_TIM7_CLK_ENABLE();
+//	HAL_NVIC_SetPriority(TIM7_IRQn, 1, 3);
+	HAL_NVIC_EnableIRQ(TIM7_IRQn);
+}
+
+void Timer_Init() {
+	htim7.Instance = TIM7;
+	htim7.Init.Prescaler = (uint32_t) 108; // 108Mhz / 108 = 1MHz
+	htim7.Init.CounterMode = TIM_COUNTERMODE_UP;
+	htim7.Init.Period = 1; // 1MHz / 1 = 1MHz -> every 1us
+	htim7.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+
+	HAL_TIM_Base_Init(&htim7);
+	HAL_TIM_Base_Start_IT(&htim7);
+}
 
 void TIM7_IRQHandler(void) {
 	HAL_TIM_IRQHandler(&htim7);
@@ -79,6 +108,10 @@ void wait_us(uint32_t us) {
 	curr_time_in_micro = 0;
 	while (curr_time_in_micro < us) ;
 }
+
+//------------------------------------------------------------------------------------
+// SPI Read/Write
+//------------------------------------------------------------------------------------
 
 // read and write 1 char at the same time since full-duplex
 uint8_t SPI_ReadWriteByte(SPI_HandleTypeDef* hspi, uint8_t TxData) {
@@ -118,7 +151,6 @@ uint8_t SPI_ReadByteFromReg(SPI_HandleTypeDef* hspi, uint8_t reg) {
 }
 
 void SPI_WriteByteToReg(SPI_HandleTypeDef* hspi, uint8_t reg, uint8_t data) {
-	uint8_t RxData;
 	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_11, GPIO_PIN_RESET);
 	wait_us(10);
 	HAL_SPI_Transmit(hspi, &reg, 1, 1000);

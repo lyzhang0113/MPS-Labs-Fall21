@@ -1,15 +1,25 @@
+//----------------------------------
+// Lab 3 - Serial Communication - spi.h
+//----------------------------------
+//
+// Helper functions for SPI
+
 #ifndef SPI_H_
 #define SPI_H_
 
+//------------------------------------------------------------------------------------
+// Includes
+//------------------------------------------------------------------------------------
 #include "stm32f769xx.h"
 #include "stm32f7xx_hal.h"
-#include <string.h>
-#include <stdio.h>
-#include <stdarg.h>
 
-TIM_HandleTypeDef htim7;
+//------------------------------------------------------------------------------------
+// Prototypes
+//------------------------------------------------------------------------------------
 
 void initSPI(SPI_HandleTypeDef* hspi, SPI_TypeDef* Tgt);
+
+void Timer_Init(void);
 
 uint8_t SPI_ReadWriteByte(SPI_HandleTypeDef* hspi, uint8_t TxData);
 
