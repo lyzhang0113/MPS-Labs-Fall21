@@ -23,7 +23,8 @@ void ADC_Config( void )
 	hADC.Instance 	= ADC1;
 
 	// Setup Init Structure
-	hinitADC.ClockPrescaler		= ADC_CLOCK_SYNC_PCLK_DIV2;
+	hinitADC.ClockPrescaler		= ADC_CLOCK_SYNC_PCLK_DIV8;
+	hinitADC.DataAlign			= ADC_DATAALIGN_RIGHT;
 	hinitADC.Resolution			= ADC_RESOLUTION_12B;
 	hinitADC.ContinuousConvMode	= DISABLE;
 	hinitADC.ExternalTrigConv	= ADC_SOFTWARE_START;
@@ -46,7 +47,9 @@ void ADC_Config( void )
 
 	*/
 	sCONFIG.Channel			= ADC_CHANNEL_6;
-	sCONFIG.SamplingTime	= ADC_SAMPLETIME_15CYCLES;		// Total Time: 492 CYC
+	sCONFIG.SamplingTime	= ADC_SAMPLETIME_480CYCLES;		// Total Time: 492 CYC
+	sCONFIG.Rank			= ADC_REGULAR_RANK_1;
+	sCONFIG.Offset			= 0;
 
 	// Configure the ADC channel
 
@@ -61,6 +64,7 @@ void HAL_ADC_MspInit(ADC_HandleTypeDef *hadc)
 	// GPIO init
 	GPIO_A_ADC.Pin 		= GPIO_PIN_6;
 	GPIO_A_ADC.Mode 	= GPIO_MODE_ANALOG;
+	GPIO_A_ADC.Pull 	= GPIO_NOPULL;
 	GPIO_A_ADC.Speed 	= GPIO_SPEED_HIGH;
 
 	HAL_GPIO_Init(GPIOA, &GPIO_A_ADC);
