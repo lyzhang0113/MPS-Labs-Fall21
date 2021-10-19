@@ -12,18 +12,21 @@
 
 #define KEY_1 0x31
 #define KEY_2 0x32
+#define KEY_3 0x33
 
 #include "init.h"
 #include <stdio.h>
 
 void initDAC1(DAC_HandleTypeDef* hdac);
+void initADC1(ADC_HandleTypeDef* hadc);
 void Terminal_Init();
 void erase_line(uint8_t line_num);
 void print_banner(char* msg, uint8_t line_num, uint8_t beep);
 
 
 DAC_HandleTypeDef hdac1;
-uint8_t dac_out = 0x00;
+ADC_HandleTypeDef hadc1;
+uint16_t dac_out = 0x00;
 
 // Main Execution Loop
 int main(void)
@@ -31,21 +34,45 @@ int main(void)
 	//Initialize the system
 	Sys_Init();
 	initDAC1(&hdac1);
+	initADC1(&hadc1);
 	Terminal_Init();
 
 	while (1) {
 		printf("Please Select Mode:\r\n");
-		printf("  1: Sawtooth Wave\r\n");
-		printf("  2: Read From ADC\r\n");
+		printf("  1: Sawtooth Wave 8-bit\r\n");
+		printf("  2: Sawtooth Wave 12-bit\r\n");
+		printf("  3: Read From 12bit ADC\r\n");
 		switch (getchar()) {
 		case KEY_1:
 			Terminal_Init();
 			while (1) {
 				HAL_DAC_SetValue(&hdac1, DAC_CHANNEL_1, DAC_ALIGN_8B_R, (uint32_t) dac_out++);
+				if (dac_out == 0xFF) dac_out = 0x00;
 			}
 			break;
 		case KEY_2:
 			Terminal_Init();
+			while (1) {
+				HAL_DAC_SetValue(&hdac1, DAC_CHANNEL_1, DAC_ALIGN_12B_R, (uint32_t) dac_out++);
+				if (dac_out == 0x0FFF) dac_out = 0x00;
+			}
+			break;
+		case KEY_3:
+			Terminal_Init();
+			while (1) {
+
+				ADC_ChannelConfTypeDef ADC1Config;
+				ADC1Config.Channel = ADC_CHANNEL_6;
+				ADC1Config.SamplingTime = ADC_SAMPLETIME_480CYCLES;
+				ADC1Config.Rank = 1;
+				ADC1Config.Offset = 0;
+
+				HAL_ADC_ConfigChannel(&hadc1, &ADC1Config);
+				HAL_ADC_Start(&hadc1);
+				HAL_ADC_PollForConversion(&hadc1, 10);
+				dac_out = (uint16_t) HAL_ADC_GetValue(&hadc1);// Get From ADC
+				HAL_DAC_SetValue(&hdac1, DAC_CHANNEL_1, DAC_ALIGN_12B_R, (uint32_t) dac_out);
+			}
 			break;
 		default:
 			Terminal_Init();
@@ -73,6 +100,7 @@ void print_banner(char* msg, uint8_t line_num, uint8_t beep) {
 	fflush(stdout);
 }
 
+// -------------- DAC -----------------
 void initDAC1(DAC_HandleTypeDef* hdac)
 {
 	// Enable the DAC Clock.
@@ -80,7 +108,7 @@ void initDAC1(DAC_HandleTypeDef* hdac)
 
 	hdac->Instance = DAC1;
 
-	HAL_DAC_Init(&hdac1); // Initialize the DAC
+	HAL_DAC_Init(hdac); // Initialize the DAC
 
 	// Configure the DAC channel
 	DAC_ChannelConfTypeDef DAC1Config;
@@ -108,4 +136,35 @@ void HAL_DAC_MspInit(DAC_HandleTypeDef *hdac)
 		HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 	}
 
+}
+
+// --------------- ADC --------------------
+void initADC1(ADC_HandleTypeDef* hadc)
+{
+	__ADC1_CLK_ENABLE();
+
+	hadc->Instance = ADC1;
+	hadc->Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV8;
+	hadc->Init.DataAlign = ADC_DATAALIGN_RIGHT;
+	hadc->Init.Resolution = ADC_RESOLUTION_12B;
+	hadc->Init.ExternalTrigConv = ADC_SOFTWARE_START;
+
+	HAL_ADC_Init(hadc);
+
+}
+
+void HAL_ADC_MspInit(ADC_HandleTypeDef *hadc)
+{
+	GPIO_InitTypeDef GPIO_InitStruct;
+
+	if (hadc->Instance == ADC1) {
+		__GPIOA_CLK_ENABLE();
+
+		GPIO_InitStruct.Mode 	= GPIO_MODE_ANALOG;
+		GPIO_InitStruct.Speed 	= GPIO_SPEED_HIGH;
+		GPIO_InitStruct.Pull 	= GPIO_NOPULL;
+		GPIO_InitStruct.Pin 	= GPIO_PIN_6;
+
+		HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+	}
 }
