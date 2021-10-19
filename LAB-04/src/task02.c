@@ -4,7 +4,8 @@
 //
 //
 
-// DAC_OUT1	--->	PA4	--->	Arduino A1
+// ADC1_CHANNEL6 ---> PA6 ---> Arduino A0
+// DAC_OUT1	     ---> PA4 ---> Arduino A1
 // DAC_OUT2 is shared with the USB 2.0 On-the-Go host controller thus not used
 
 #define TERM_WIDTH 80
