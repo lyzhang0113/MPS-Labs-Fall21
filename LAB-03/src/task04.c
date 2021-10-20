@@ -84,8 +84,7 @@ int main(void) {
 	        	printf("    3. Print peripheral firmware version\r\n");
 	        	printf("    4. Trigger & Print temperature reading\r\n");
 	        	printf("    5. Clear peripheral terminal\r\n");
-	        	printf("    6. Change device ID\r\n\n");
-	        	fflush(stdout);
+	        	printf("    6. Change device ID\r\n");
 
 	        	switch(getchar()) {
 	        	case MODE2_READ_TERM:
@@ -93,6 +92,7 @@ int main(void) {
 	        		Terminal_Init();
 	        		print_banner("You've Entered Mode 2 - Receive From Peripheral Terminal", 2, 0);
 	        		print_banner("To EXIT, Enter <ESC> in Terminal", 23, 0);
+	        		printf("\033[14;0HCharacters Received From SPI: \n\r\033[s");	// Print in SPI area
 	        		while (1) {
 		        		while (!(SPI_ReadByteFromReg(&hspi2, 0x01) & (uint8_t) 1 << 5)
 								&& !(SPI_ReadByteFromReg(&hspi2, 0x01) & (uint8_t) 1 << 6)) {
@@ -104,7 +104,7 @@ int main(void) {
 		        		}
 		        		if (terminate) break;
 	        			rx_spi = SPI_ReadByteFromReg(&hspi2, 0x05); // Read from SPI
-	        			printf("\033[14;0HCharacters Received From SPI: %c\n", rx_spi);	// Print in SPI area
+	        			printf("\033[u %c\033[s", rx_spi);	// Print in SPI area
 	        			fflush(stdout);
 	        			rx_spi = 0x00;
 	        		}
@@ -192,7 +192,7 @@ int main(void) {
 // Utility Functions
 //------------------------------------------------------------------------------------
 void Terminal_Init() {
-    printf("\033[0m\033[2J\033[;H"); // Erase screen & move cursor to home position
+    printf("\033[0m\033[2J\033[;H\033[r"); // Erase screen & move cursor to home position
     fflush(stdout); // Need to flush stdout after using printf that doesn't end in \n
 }
 

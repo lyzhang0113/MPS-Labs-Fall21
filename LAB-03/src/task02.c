@@ -22,6 +22,7 @@
 // Function Prototypes
 //------------------------------------------------------------------------------------
 void Terminal_Init( void );
+void Interrupt_Init( void );
 void UART_Init( void );
 char uart_getchar_it(UART_HandleTypeDef *huart, uint8_t echo);
 
@@ -31,25 +32,23 @@ char uart_getchar_it(UART_HandleTypeDef *huart, uint8_t echo);
 UART_HandleTypeDef huart1, huart6;
 char in, input[1];
 
+
 //------------------------------------------------------------------------------------
-// Interrupt Handlers
+// MAIN FUNCTION
 //------------------------------------------------------------------------------------
-void USART1_IRQHandler( void ) { HAL_UART_IRQHandler(&huart1); }
-void USART6_IRQHandler( void ) { HAL_UART_IRQHandler(&huart6); }
-void HAL_UART_RxCpltCallback( UART_HandleTypeDef *huart )
+int main(void)
 {
-	/* Receive in UART1, Transmit to UART6 */
-	if (huart->Instance == USART1)
-	{
-		in = uart_getchar_it(&huart1, 1);
-		uart_putchar(&huart6, &in);
-	}
-	/* Receive in UART6, Transmit to UART1 */
-	else if (huart->Instance == USART6)
-	{
-		in = uart_getchar_it(&huart6, 0);
-		uart_putchar(&huart1, &in);
-	}
+	//Initialize the system
+	Sys_Init();
+	UART_Init();
+	Interrupt_Init();
+
+	uart_getchar_it(&huart1, 0);
+	uart_getchar_it(&huart6, 0);
+
+	Terminal_Init();
+
+	while (1);
 }
 
 //------------------------------------------------------------------------------------
@@ -77,23 +76,25 @@ void UART_Init( void )
 	initUart(&huart6, (uint32_t) 38400, USART6);
 }
 
-
 //------------------------------------------------------------------------------------
-// MAIN FUNCTION
+// Interrupt Handlers
 //------------------------------------------------------------------------------------
-int main(void)
+void USART1_IRQHandler( void ) { HAL_UART_IRQHandler(&huart1); }
+void USART6_IRQHandler( void ) { HAL_UART_IRQHandler(&huart6); }
+void HAL_UART_RxCpltCallback( UART_HandleTypeDef *huart )
 {
-	//Initialize the system
-	Sys_Init();
-	UART_Init();
-	Interrupt_Init();
-
-	uart_getchar_it(&huart1, 0);
-	uart_getchar_it(&huart6, 0);
-
-	Terminal_Init();
-
-	while (1);
+	/* Receive in UART1, Transmit to UART6 */
+	if (huart->Instance == USART1)
+	{
+		in = uart_getchar_it(&huart1, 1);
+		uart_putchar(&huart6, &in);
+	}
+	/* Receive in UART6, Transmit to UART1 */
+	else if (huart->Instance == USART6)
+	{
+		in = uart_getchar_it(&huart6, 0);
+		uart_putchar(&huart1, &in);
+	}
 }
 
 //------------------------------------------------------------------------------------

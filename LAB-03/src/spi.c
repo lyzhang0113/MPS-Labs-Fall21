@@ -140,23 +140,23 @@ void SPI_WriteByte(SPI_HandleTypeDef* hspi, uint8_t TxData, uint32_t timeout) {
 uint8_t SPI_ReadByteFromReg(SPI_HandleTypeDef* hspi, uint8_t reg) {
 	uint8_t RxData;
 	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_11, GPIO_PIN_RESET);
-	wait_us(10);
+	wait_us(5);
 	HAL_SPI_Transmit(hspi, &reg, 1, 1000);
-	wait_us(20);
+	wait_us(10);
 	HAL_SPI_Receive(hspi, &RxData, 1, 1000);
-	wait_us(10);
+	wait_us(5);
 	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_11, GPIO_PIN_SET);
-	wait_us(10);
+	wait_us(5);
 	return RxData;
 }
 
 void SPI_WriteByteToReg(SPI_HandleTypeDef* hspi, uint8_t reg, uint8_t data) {
 	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_11, GPIO_PIN_RESET);
-	wait_us(10);
+	wait_us(5);
 	HAL_SPI_Transmit(hspi, &reg, 1, 1000);
-	wait_us(20);
+	wait_us(10);
 	HAL_SPI_Transmit(hspi, &data, 1, 1000);
-	wait_us(10);
+	wait_us(5);
 	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_11, GPIO_PIN_SET);
-	wait_us(10);
+	wait_us(5);
 }
