@@ -38,7 +38,7 @@
 //
 // -- Prototypes ------------
 //
-void Terminal_Init(void);
+void reset_terminal(void);
 void GPIO_Init(void);
 void Interrupt_Init(void);
 
@@ -181,7 +181,7 @@ void print_warning(char* msg) {
 
 void reset_maze() {
 
-    Terminal_Init();
+    reset_terminal();
 
     char* msg = "USE <W><A><S><D> TO MOVE AROUND IN THE MAZE";
     int padlen = (TERM_WIDTH - strlen(msg)) / 2;
@@ -234,7 +234,7 @@ void EXTI0_IRQHandler(void) {
 //
 
 // This function resets the terminal
-void Terminal_Init(void) {
+void reset_terminal(void) {
 	// Reset all attributes & Erase screen & move cursor to home position & reset scroll section
     printf("\033[0m\033[2J\033[;H\033[r");
     fflush(stdout); // Need to flush stdout after using printf that doesn't end in \n

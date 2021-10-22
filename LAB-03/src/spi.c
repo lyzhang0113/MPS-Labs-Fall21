@@ -127,7 +127,6 @@ uint8_t SPI_ReadByte(SPI_HandleTypeDef* hspi, uint32_t timeout) {
 	uint8_t RxData;
 	HAL_SPI_Receive(hspi, &RxData, 1, timeout);
 	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_11, GPIO_PIN_SET);
-	HAL_Delay(1);
 	return RxData;
 }
 
