@@ -4,16 +4,22 @@
 //
 //
 
-#include "init.h"
+#define TERM_WIDTH 80
+#define TERM_HEIGHT 24
+#define VREF 0b111111111111UL
 
+#include "init.h"
+#include <stdio.h>
+#include <float.h>
 
 ADC_HandleTypeDef 		hADC;
 ADC_InitTypeDef			hinitADC;
 ADC_ChannelConfTypeDef 	sCONFIG;
 GPIO_InitTypeDef		GPIO_A_ADC, GPIO_A_PB;
 
-uint32_t	vals[16];
-
+double 		ADC_val, ADC_avg, ADC_hi, ADC_lo, ADC_vals[16];
+uint32_t 	ADC_dec = 0;
+uint8_t 	ind = 0;
 
 void ADC_Config( void )
 {
@@ -34,18 +40,6 @@ void ADC_Config( void )
 
 	HAL_ADC_Init(&hADC); // Initialize the ADC
 
-	/* Available sampling times:
-
-		ADC_SAMPLETIME_3CYCLES
-	  	ADC_SAMPLETIME_15CYCLES
-		ADC_SAMPLETIME_28CYCLES
-		ADC_SAMPLETIME_56CYCLES
-		ADC_SAMPLETIME_84CYCLES
-		ADC_SAMPLETIME_112CYCLES
-		ADC_SAMPLETIME_144CYCLES
-		ADC_SAMPLETIME_480CYCLES
-
-	*/
 	sCONFIG.Channel			= ADC_CHANNEL_6;
 	sCONFIG.SamplingTime	= ADC_SAMPLETIME_480CYCLES;		// Total Time: 492 CYC
 	sCONFIG.Rank			= ADC_REGULAR_RANK_1;
@@ -82,15 +76,60 @@ void GPIO_Init( void )
 	HAL_GPIO_Init(GPIOA, &GPIO_A_PB);
 }
 
-void calc_and_print( uint32_t val, uint8_t ind )
-{
-
-}
-
 void Terminal_Init( void )
 {
     printf("\033[0m\033[2J\033[;H"); // Erase screen & move cursor to home position
     fflush(stdout); // Need to flush stdout after using printf that doesn't end in \n
+    printf("\033[HLow: \033[1;25HHigh: \033[1;50HAverage: \r\n");
+    printf("\033[2;2HCurrent Measurement (Voltage): \r\n");
+    printf("\033[3;2HCurrent Measurement (Decimal): \r\n");
+    printf("\033[H");
+    fflush(stdout);
+}
+
+void Var_Init( void )
+{
+	bzero(&ADC_val, sizeof(double));
+	bzero(&ADC_avg, sizeof(double));
+	bzero(&ADC_vals, 16*sizeof(double));
+
+	ADC_hi = (double) 0.0;
+	ADC_lo = (double) DBL_MAX;
+}
+
+double ADC_to_double( uint32_t val )
+{
+	if ( val < (uint32_t) 10) return (double)0.0;
+	return (double)((double)3.3/VREF) * val;
+}
+
+void ADC_calc_avg( double val )
+{
+	double sum = 0;
+
+	if (ind < 16) {
+		ADC_vals[ind++] = val;
+	} else {
+		for (int i = 0; i < 15; i++) {
+			ADC_vals[i] = ADC_vals[i+1];
+		}
+		ADC_vals[ind-1] = val;
+	}
+	for (int v = 0; v < ind; v++) {
+		sum += ADC_vals[v];
+	}
+	ADC_avg = (double)(sum/ind);
+}
+
+void ADC_print( double val )
+{
+	Terminal_Init();
+
+	printf("\033[1;5H %f V\033[1;30H %f V\033[1;59H %f V\r\n", ADC_lo, ADC_hi, ADC_avg);
+	printf("\033[2;40H %f V", ADC_val);
+	fflush(stdout);
+	printf("\033[3;40H %ld", ADC_dec);
+	fflush(stdout);
 }
 
 // Main Execution Loop
@@ -101,13 +140,7 @@ int main(void)
 	ADC_Config();
 	GPIO_Init();
 	Terminal_Init();
-
-	uint8_t		index = 0, nonzero = 0;
-
-	uint32_t 	ADC_value = 0, hi = 0, lo = INT32_MAX;
-	double 		ADC_avg = 0;
-
-	bzero(&vals, 16*sizeof(uint32_t));
+	Var_Init();
 
 	while(1){
 		if (HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0)) {
@@ -117,37 +150,16 @@ int main(void)
 			HAL_ADC_Start(&hADC);
 
 			while (HAL_ADC_PollForConversion(&hADC, 100000) != HAL_OK);
-			ADC_value = HAL_ADC_GetValue(&hADC);
+			ADC_dec = HAL_ADC_GetValue(&hADC);
+			ADC_val = ADC_to_double(ADC_dec);
 
-			if (ADC_value > hi) hi = ADC_value;
-			if (ADC_value < lo) lo = ADC_value;
+			ADC_calc_avg(ADC_val);
+			ADC_print	(ADC_val);
 
+			if (ADC_val > ADC_hi) ADC_hi = ADC_val;
+			if (ADC_val < ADC_lo) ADC_lo = ADC_val;
 
-			if (index > 15) {
-				for (int i = 0; i < 15; i++) {
-					vals[i] = vals[i+1];
-				}
-				vals[15] 	= ADC_value;
-			} else
-				vals[index] = ADC_value;
-
-
-			for (int i = 0; i < 16; i++) {
-				if (vals[i] != 0) nonzero++;
-				ADC_avg += vals[i];
-			}
-
-			ADC_avg = (float)ADC_avg/nonzero;
-
-			Terminal_Init();
-			printf("\033[HLow: %ld\033[0;20HHigh: %ld\033[0;40HAverage:%f\r\n", lo, hi, ADC_avg);
-			printf("\tMost Recent Measurement:\t%ld\r\n", ADC_value);
-			printf("\tMost Recent Measurement (Hex):\t%lX", ADC_value);
-			fflush(stdout);
-
-			index++;
-			nonzero = 0;
-			ADC_avg = 0;
+			HAL_Delay(100);
 		}
 	}
 }
