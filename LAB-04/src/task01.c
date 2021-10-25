@@ -92,7 +92,7 @@ void Var_Init( void )
 	ADC_val = (double) 0.0;
 	ADC_avg = (double) 0.0;
 	ADC_hi  = (double) 0.0;
-	ADC_lo  = (double) DBL_MAX;
+	ADC_lo  = (double) 100.0;
 
 	bzero(&ADC_vals, 16*sizeof(double));
 }
