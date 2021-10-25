@@ -2,7 +2,9 @@
 // Lab 4 - Analog COnv. and Digital Signal Processing - task01.c
 //--------------------------------
 //
-//
+// + Needed to use IEEE 754 Floating Point Converter for Assembly values
+// + Use "m" instead of "r" or "t" for VLDR
+
 
 #include <stdio.h>
 #include "init.h"
@@ -118,7 +120,7 @@ float asm_subtask_3( float x ) {
 
 float asm_subtask_4( float x ) {
 	float res = 0;
-	asm volatile ("VLDR.F32 s1, %[in]" : : [in] "m" (x));	// Add in report
+	asm volatile ("VLDR.F32 s1, %[in]" : : [in] "m" (x));	// Add in report "t"->"m"
 	asm volatile ("VLDR.F32 s3, =0x3F2AAAAB \r\n VLDR.F32 s4, =0x40A00000");
 	asm volatile ("VMLA.F32 s4, s1, s3");
 	asm volatile ("VSTR s4, %0" : "=m" (res));

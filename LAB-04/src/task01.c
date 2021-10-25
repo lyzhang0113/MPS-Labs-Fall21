@@ -2,7 +2,7 @@
 // Lab 4 - Sample - Lab04_sample.c
 //--------------------------------
 //
-//
+// + Initial variable values printed on first PB press
 
 #define TERM_WIDTH 80
 #define TERM_HEIGHT 24
@@ -18,7 +18,7 @@ ADC_ChannelConfTypeDef 	sCONFIG;
 GPIO_InitTypeDef		GPIO_A_ADC, GPIO_A_PB;
 
 double 		ADC_val, ADC_avg, ADC_hi, ADC_lo, ADC_vals[16];
-uint32_t 	ADC_dec = 0;
+uint32_t 	ADC_hex = 0;
 uint8_t 	ind = 0;
 
 void ADC_Config( void )
@@ -128,7 +128,7 @@ void ADC_print( double val )
 	printf("\033[1;5H %f V\033[1;30H %f V\033[1;59H %f V\r\n", ADC_lo, ADC_hi, ADC_avg);
 	printf("\033[2;40H %f V", ADC_val);
 	fflush(stdout);
-	printf("\033[3;40H %ld", ADC_dec);
+	printf("\033[3;40H 0x%lX", ADC_hex);
 	fflush(stdout);
 }
 
@@ -150,8 +150,8 @@ int main(void)
 			HAL_ADC_Start(&hADC);
 
 			while (HAL_ADC_PollForConversion(&hADC, 100000) != HAL_OK);
-			ADC_dec = HAL_ADC_GetValue(&hADC);
-			ADC_val = ADC_to_double(ADC_dec);
+			ADC_hex = HAL_ADC_GetValue(&hADC);
+			ADC_val = ADC_to_double(ADC_hex);
 
 			ADC_calc_avg(ADC_val);
 			ADC_print	(ADC_val);
