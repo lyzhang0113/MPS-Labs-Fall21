@@ -1,5 +1,5 @@
 //--------------------------------
-// Lab 4 - Analog COnv. and Digital Signal Processing - task01.c
+// Lab 4 - Analog COnv. and Digital Signal Processing - task03.1.c
 //--------------------------------
 //
 //
@@ -115,6 +115,7 @@ int32_t asm_subtask_3(int32_t x) {
 int32_t asm_subtask_4(int32_t x) {
 	int32_t res = 0;
 	asm volatile ("LDR r3, =0x03 \r\n SDIV r2, %[in], r3" : :[in] "r" (x));
+	// Clobber r4 so that it is not over-written
 	asm volatile ("LDR r3, =0x02 \r\n LDR r4, =0x05 \r\n MLA %[out], r2, r3, r4" :[out] "=r" (res) : : "r4");
 	return res;
 }
