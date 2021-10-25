@@ -89,12 +89,12 @@ void Terminal_Init( void )
 
 void Var_Init( void )
 {
-	bzero(&ADC_val, sizeof(double));
-	bzero(&ADC_avg, sizeof(double));
-	bzero(&ADC_vals, 16*sizeof(double));
+	ADC_val = (double) 0.0;
+	ADC_avg = (double) 0.0;
+	ADC_hi  = (double) 0.0;
+	ADC_lo  = (double) DBL_MAX;
 
-	ADC_hi = (double) 0.0;
-	ADC_lo = (double) DBL_MAX;
+	bzero(&ADC_vals, 16*sizeof(double));
 }
 
 double ADC_to_double( uint32_t val )
