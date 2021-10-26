@@ -19,7 +19,7 @@ DAC_HandleTypeDef hdac1;
 ADC_HandleTypeDef hadc1;
 
 //uint16_t x_k = 0, x_k1 = 0, x_k2 = 0, y_k1 = 0, y_k = 0;
-uint16_t y_k = 0;
+uint32_t y_k = 0;
 int main() {
 	// Initialize the system
 	Sys_Init();
@@ -35,10 +35,10 @@ int main() {
 //		x_k1 = x_k;
 //		x_k = (uint16_t) HAL_ADC_GetValue(&hadc1);
 //		y_k1 = y_k;
-		y_k = calc_using_asm((uint16_t) HAL_ADC_GetValue(&hadc1));
+		y_k = calc_using_asm(HAL_ADC_GetValue(&hadc1));
 //		printf("\rx_k2 = %d, x_k1 = %d, x_k = %d, y_k1 = %d, y_k = %d", x_k2, x_k1, x_k, y_k1, y_k);
 //		fflush(stdout);
-		HAL_DAC_SetValue(&hdac1, DAC_CHANNEL_1, DAC_ALIGN_12B_R, (uint32_t) y_k);
+		HAL_DAC_SetValue(&hdac1, DAC_CHANNEL_1, DAC_ALIGN_12B_R, y_k);
 	}
 }
 
@@ -47,7 +47,7 @@ int main() {
 //	return (uint16_t) ((float)0.312500 * x_k + (float)0.240385 * x_k1 + (float)0.312500 * x_k2 + (float)0.296875 * y_k1);
 //}
 
-uint16_t calc_using_asm(uint16_t new_adc_reading) {
+uint32_t calc_using_asm(uint32_t new_adc_reading) {
 	/*
 	 * s1: 0.312500
 	 * s2: 0.240385
@@ -63,10 +63,10 @@ uint16_t calc_using_asm(uint16_t new_adc_reading) {
 	asm("VMOV s6, s5 \r\n VMOV s5, s4 \r\n VMOV s7, s8"); // store previous x and y values
 
 	// s8 = 0.312500 * s4 + 0.240385 * s5 + 0.312500 * s6 + 0.296875 * s7
-	asm("VMUL.F32 s9, s1, s4 \r\n VMLA.F32 s9, s2, s5 \r\n VMLA.F32 s9, s1, s6 \r\n VMLA.F32 s9, s3, s7");
-	asm("VSTR s9, %0" : "=m" (res));
+	asm("VMUL.F32 s8, s1, s4 \r\n VMLA.F32 s8, s2, s5 \r\n VMLA.F32 s8, s1, s6 \r\n VMLA.F32 s8, s3, s7");
+	asm("VSTR s8, %0" : "=m" (res));
 //	asm("VCVT"); // round to int
-	return (uint16_t) res;
+	return (uint32_t) res;
 
 }
 
