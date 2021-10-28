@@ -86,8 +86,21 @@ int main() {
 			 * s11 := s10; s12 := s11; s13 := s12; s14 := s13
 			 * s16 := s15; s17 := s16; s18 := s17; s19 := s18
 			 */
+			int32_t adc_x_adj = (int32_t) adc_x - 2047;
+			int32_t adc_y_adj = (int32_t) adc_y - 2047;
+			dac_res = adc_x_adj * adc_y_adj / (int32_t) VREF + 2047;
 
-			dac_res = adc_x * adc_y / VREF;
+			asm volatile("VCVT.F32.U32 s10, %[in]" : :[in] "t" (dac_res));
+
+			asm volatile("VMUL.F32 s15, s1, s10");
+
+//			asm volatile("VMUL.F32 s15, s1, s10 \r\n VMLA.F32 s15, s2, s12 \r\n VMLA.F32 s15, s1, s14");
+//			asm volatile("VMLA.F32 s15, s3, s16 \r\n VMLA.F32 s15, s4, s17 \r\n VMLA.F32 s15, s5, s18");
+//			asm volatile("VMLA.F32 s15, s6, s19");
+			asm volatile("VCVT.U32.F32 %[out], s15" :[out] "=t" (dac_res));
+			asm volatile("VMOV s14, s13 \r\n VMOV s13, s12 \r\n VMOV s12, s11 \r\n VMOV s11, s10");
+//			asm volatile("VMOV s19, s18 \r\n VMOV s18, s17 \r\n VMOV s17, s16 \r\n VMOV s16, s15");
+
 			HAL_DAC_SetValue(&hdac1, DAC_CHANNEL_1, DAC_ALIGN_12B_R, dac_res);
 			adc_flags = 0x00;
 		}
@@ -240,7 +253,7 @@ void HAL_TIM_OC_MspInit(TIM_HandleTypeDef* htim) {
 //		GPIO_InitStruct.Pull 	= GPIO_NOPULL;
 //		GPIO_InitStruct.Pin 	= GPIO_PIN_8;
 //		GPIO_InitStruct.Alternate = GPIO_AF2_TIM3;
-//		HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+//		HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);3
 	}
 }
 
