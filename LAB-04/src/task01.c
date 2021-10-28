@@ -6,7 +6,7 @@
 
 #define TERM_WIDTH 80
 #define TERM_HEIGHT 24
-#define VREF 0b111111111111UL
+#define VREF 0b111111111111UL // 4095
 
 #include "init.h"
 #include <stdio.h>
