@@ -9,8 +9,6 @@
 // DAC_OUT1	     ---> PA4 ---> Arduino A1
 // DAC_OUT2 is shared with the USB 2.0 On-the-Go host controller thus not used
 
-#define VREF 0b111111111111UL // 4095
-
 #include <stdio.h>
 #include "init.h"
 
@@ -23,8 +21,12 @@ TIM_HandleTypeDef htim3;
 DAC_HandleTypeDef hdac1;
 ADC_HandleTypeDef hadc1, hadc3;
 
-uint32_t adc_x, adc_y, dac_res;
+uint32_t adc_x, adc_y;
+int32_t dac_res;
 uint8_t adc_flags = 0x00; // bit1: adc1; bit3: adc3
+
+uint8_t bias_measured = 0;
+uint32_t bias_x = 0, bias_y = 0;
 
 void GPIO_Init( void )
 {
@@ -57,11 +59,21 @@ int main() {
 	// Load Float Constants
 	asm("VLDR.F32 s1, =0x3a83126f \r\n VLDR.F32 s2, =0xbb03126f \r\n VLDR.F32 s3, =0x404a9fbe");
 	asm("VLDR.F32 s4, =0xc08d6042 \r\n VLDR.F32 s5, =0x4041cac1 \r\n VLDR.F32 s6, =0xbf6a3d71");
-
+	asm("VLDR.F32 s16, =0x44ffe000 \r\n VLDR.F32 s17, =0x44ffe000 \r\n VLDR.F32 s18, =0x44ffe000 \r\n VLDR.F32 s19, =0x44ffe000");
 
 	while (1) {
 
 		if (adc_flags == 0x0A) {
+			if (bias_measured == 0) {
+				for (uint32_t i = 0; i < 2000000; i++) {
+					bias_x += adc_x;
+					bias_y += adc_y;
+				}
+				bias_measured = 1;
+				bias_x /= 2000000; bias_y /= 2000000;
+				printf("DC Bias X = %ld     DC Bias Y = %ld     \r\n", bias_x, bias_y);
+				continue;
+			}
 			/*
 			 * Using MAC Float Assembly
 				 * s1: 0.001	-> 0x3a83126f
@@ -75,45 +87,32 @@ int main() {
 				 * s12: x_k2
 				 * s13: x_k3
 				 * s14: x_k4
-				 * s15: y_k
+				 * s20: y_k
 				 * s16: y_k1
 				 * s17: y_k2
 				 * s18: y_k3
 				 * s19: y_k4
 			 * Load s10
-			 * s15 := s1 * s10 + s2 * s12 + s1 * s14 + s3 * s16 + s4 * s17 + s5 * s18 + s6 * s19
-			 * Store s15
+			 * s20 := s1 * s10 + s2 * s12 + s1 * s14 + s3 * s16 + s4 * s17 + s5 * s18 + s6 * s19
+			 * Store s20
 			 * s11 := s10; s12 := s11; s13 := s12; s14 := s13
-			 * s16 := s15; s17 := s16; s18 := s17; s19 := s18
+			 * s16 := s20; s17 := s16; s18 := s17; s19 := s18
 			 */
-			int32_t adc_x_adj = (int32_t) adc_x - 2047;
-			int32_t adc_y_adj = (int32_t) adc_y - 2047;
-			dac_res = adc_x_adj * adc_y_adj / (int32_t) VREF + 2047;
+			int32_t adc_x_adj = adc_x - bias_x;
+			int32_t adc_y_adj = adc_y - bias_y;
+			int32_t mix = adc_x_adj * adc_y_adj / 2047;
 
-			asm volatile("VCVT.F32.U32 s10, %[in]" : :[in] "t" (dac_res));
-
-			asm volatile("VMUL.F32 s15, s1, s10");
-
-//			asm volatile("VMUL.F32 s15, s1, s10 \r\n VMLA.F32 s15, s2, s12 \r\n VMLA.F32 s15, s1, s14");
-//			asm volatile("VMLA.F32 s15, s3, s16 \r\n VMLA.F32 s15, s4, s17 \r\n VMLA.F32 s15, s5, s18");
-//			asm volatile("VMLA.F32 s15, s6, s19");
-			asm volatile("VCVT.U32.F32 %[out], s15" :[out] "=t" (dac_res));
+			asm volatile("VCVT.F32.S32 s10, %[in]" : :[in] "t" (mix));
+			asm volatile("VMUL.F32 s20, s1, s10 \r\n VMLA.F32 s20, s2, s12 \r\n VMLA.F32 s20, s1, s14");
+			asm volatile("VMLA.F32 s20, s3, s16 \r\n VMLA.F32 s20, s4, s17 \r\n VMLA.F32 s20, s5, s18");
+			asm volatile("VMLA.F32 s20, s6, s19");
+			asm volatile("VCVT.S32.F32 %[out], s20" :[out] "=t" (dac_res));
 			asm volatile("VMOV s14, s13 \r\n VMOV s13, s12 \r\n VMOV s12, s11 \r\n VMOV s11, s10");
-//			asm volatile("VMOV s19, s18 \r\n VMOV s18, s17 \r\n VMOV s17, s16 \r\n VMOV s16, s15");
-
-			HAL_DAC_SetValue(&hdac1, DAC_CHANNEL_1, DAC_ALIGN_12B_R, dac_res);
+			asm volatile("VMOV s19, s18 \r\n VMOV s18, s17 \r\n VMOV s17, s16 \r\n VMOV s16, s20");
+			dac_res += bias_x > bias_y ? bias_x : bias_y;
+			HAL_DAC_SetValue(&hdac1, DAC_CHANNEL_1, DAC_ALIGN_12B_R, (uint32_t) dac_res);
 			adc_flags = 0x00;
 		}
-
-
-
-//		asm("VCVT.F32.U32 s4, %[adc]" : :[adc] "t" (adc_reading));
-//		// s8 = 0.312500 * s4 + 0.240385 * s5 + 0.312500 * s6 + 0.296875 * s7
-//		asm("VMUL.F32 s8, s1, s4 \r\n VMLA.F32 s8, s2, s5 \r\n VMLA.F32 s8, s1, s6 \r\n VMLA.F32 s8, s3, s7");
-//		asm("VCVT.U32.F32 %[dac], s8" :[dac] "=t" (dac_response));
-//		asm("VMOV s6, s5 \r\n VMOV s5, s4 \r\n VMOV s7, s8"); // store previous x and y values
-
-//		HAL_DAC_SetValue(&hdac1, DAC_CHANNEL_1, DAC_ALIGN_12B_R, dac_response);
 	}
 }
 
