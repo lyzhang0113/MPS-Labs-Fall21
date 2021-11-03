@@ -1,22 +1,39 @@
 //--------------------------------
-// Lab 4 - Analog COnv. and Digital Signal Processing - task04.c
+// Lab 4 - Analog Conversion and Digital Signal Processing - task04.c
 //--------------------------------
-//
+//	IIR Filter Implementation: Use ADC and DAC, make an IIR filter with designated
+//	response. Assembly math could be used for faster calculation purposes thus
+//	better results.
 //
 
-
+//------------------------------------------------------------------------------------
+// Includes
+//------------------------------------------------------------------------------------
 #include <stdio.h>
 #include "init.h"
 
+//------------------------------------------------------------------------------------
+// Prototypes
+//------------------------------------------------------------------------------------
 void initDAC1(DAC_HandleTypeDef* hdac);
 void initADC1(ADC_HandleTypeDef* hadc);
 void reset_terminal();
 
+//------------------------------------------------------------------------------------
+// Global Variables
+//------------------------------------------------------------------------------------
 DAC_HandleTypeDef hdac1;
 ADC_HandleTypeDef hadc1;
 ADC_ChannelConfTypeDef ADC1Config;
 
+/*
+ * Using c Float Math
+ */
 //uint16_t x_k = 0, x_k1 = 0, x_k2 = 0, y_k1 = 0, y_k = 0;
+
+//------------------------------------------------------------------------------------
+// MAIN Routine
+//------------------------------------------------------------------------------------
 int main() {
 	// Initialize the system
 	Sys_Init();
@@ -28,7 +45,10 @@ int main() {
 	asm("VLDR.F32 s1, =0x3EA00000 \r\n VLDR.F32 s2, =0x3E76277C \r\n VLDR.F32 s3, =0x3E980000");
 
 	uint32_t adc_reading = 0, dac_response = 0;
-	uint32_t x_k1 = 0, x_k2 = 0, y_k1 = 0;
+	/*
+	 * Using c Float Math
+	 */
+//	uint32_t x_k1 = 0, x_k2 = 0, y_k1 = 0;
 
 	while (1) {
 
@@ -64,13 +84,17 @@ int main() {
 	}
 }
 
-
+//------------------------------------------------------------------------------------
+// Misc. Helper Functions
+//------------------------------------------------------------------------------------
 void reset_terminal() {
     printf("\033[0m\033[2J\033[;H\033[r"); // Erase screen & move cursor to home position
     fflush(stdout); // Need to flush stdout after using printf that doesn't end in \n
 }
 
-// -------------- DAC -----------------
+//------------------------------------------------------------------------------------
+// DAC
+//------------------------------------------------------------------------------------
 void initDAC1(DAC_HandleTypeDef* hdac)
 {
 	// Enable the DAC Clock.
@@ -109,7 +133,9 @@ void HAL_DAC_MspInit(DAC_HandleTypeDef *hdac)
 }
 
 
-// --------------- ADC --------------------
+//------------------------------------------------------------------------------------
+// ADC
+//------------------------------------------------------------------------------------
 void initADC1(ADC_HandleTypeDef* hadc)
 {
 	__ADC1_CLK_ENABLE();

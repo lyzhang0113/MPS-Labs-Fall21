@@ -1,19 +1,27 @@
 //--------------------------------
-// Lab 4 - Analog COnv. and Digital Signal Processing - task03.1.c
+// Lab 4 - Analog Conversion and Digital Signal Processing - task03.1.c
 //--------------------------------
-//
+//	Simple Assembly Math (Set 1): Use assembly, evaluate integer math expressions
 //
 
+//------------------------------------------------------------------------------------
+// Includes
+//------------------------------------------------------------------------------------
 #include <stdio.h>
 #include "init.h"
 
+//------------------------------------------------------------------------------------
+// Prototypes
+//------------------------------------------------------------------------------------
 void reset_terminal();
 int32_t asm_subtask_1();
 int32_t asm_subtask_2(int32_t m1, int32_t m2);
 int32_t asm_subtask_3(int32_t x);
 int32_t asm_subtask_4(int32_t x);
 
-// Main Execution Loop
+//------------------------------------------------------------------------------------
+// MAIN Routine
+//------------------------------------------------------------------------------------
 int main(void)
 {
 	//Initialize the system

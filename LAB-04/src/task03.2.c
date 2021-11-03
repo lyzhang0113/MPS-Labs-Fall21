@@ -1,21 +1,29 @@
 //--------------------------------
-// Lab 4 - Analog COnv. and Digital Signal Processing - task01.c
+// Lab 4 - Analog Conversion and Digital Signal Processing - task03.2.c
 //--------------------------------
+//	Simple Assembly Math (Set 2): Use assembly, evaluate float math expressions
 //
 // + Needed to use IEEE 754 Floating Point Converter for Assembly values
 // + Use "m" instead of "r" or "t" for VLDR
 
-
+//------------------------------------------------------------------------------------
+// Includes
+//------------------------------------------------------------------------------------
 #include <stdio.h>
 #include "init.h"
 
+//------------------------------------------------------------------------------------
+// Prototypes
+//------------------------------------------------------------------------------------
 void reset_terminal();
 float asm_subtask_1();
 float asm_subtask_2(float m1, float m2);
 float asm_subtask_3(float x);
 float asm_subtask_4(float x);
 
-// Main Execution Loop
+//------------------------------------------------------------------------------------
+// MAIN Routine
+//------------------------------------------------------------------------------------
 int main(void)
 {
 	//Initialize the system
@@ -27,7 +35,7 @@ int main(void)
 
 	/* 1. 	Use Basic Inline Assembly:
 	 * 			Load into registers
-	 * 			Add two integer numbers (hard-coded)
+	 * 			Add two float numbers (hard-coded)
 	 * 		Use Extended Assembly:
 	 * 			Pass the resultant value to a C variable
 	 * 		Print Result

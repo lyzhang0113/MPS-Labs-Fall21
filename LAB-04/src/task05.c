@@ -1,7 +1,8 @@
 //--------------------------------
-// Lab 4 - Analog COnv. and Digital Signal Processing - task04.c
+// Lab 4 - Analog Conversion and Digital Signal Processing - task05.c
 //--------------------------------
-//
+//	[Depth] Frequency Mixer: Implement a mixer and filter using two ADC
+//	channels as input, and DAC_OUT1 as output.
 //
 
 // ADC1_CHANNEL6 ---> PA6 ---> Arduino A0
@@ -9,14 +10,23 @@
 // DAC_OUT1	     ---> PA4 ---> Arduino A1
 // DAC_OUT2 is shared with the USB 2.0 On-the-Go host controller thus not used
 
+//------------------------------------------------------------------------------------
+// Includes
+//------------------------------------------------------------------------------------
 #include <stdio.h>
 #include "init.h"
 
+//------------------------------------------------------------------------------------
+// Prototypes
+//------------------------------------------------------------------------------------
 void initTIM(TIM_HandleTypeDef* htim, TIM_TypeDef* Tgt, uint32_t chn);
 void initDAC(DAC_HandleTypeDef* hdac, DAC_TypeDef* Tgt, uint32_t chn);
 void initADC(ADC_HandleTypeDef* hadc, ADC_TypeDef* Tgt, uint32_t chn);
 void reset_terminal();
 
+//------------------------------------------------------------------------------------
+// Global Variables
+//------------------------------------------------------------------------------------
 TIM_HandleTypeDef htim3;
 DAC_HandleTypeDef hdac1;
 ADC_HandleTypeDef hadc1, hadc3;
@@ -28,28 +38,36 @@ uint8_t adc_flags = 0x00; // bit1: adc1; bit3: adc3
 uint8_t bias_measured = 0;
 uint32_t bias_x = 0, bias_y = 0;
 
-void GPIO_Init( void )
-{
-	GPIO_InitTypeDef GPIO_C;
-    // enable the GPIO port peripheral clock
-	__HAL_RCC_GPIOC_CLK_ENABLE(); 	// Through HAL
-	/* Initialize Pin Numbers */
-	GPIO_C.Pin = GPIO_PIN_6 | GPIO_PIN_7;
-	/* Initialize Pin Modes */
-	GPIO_C.Mode = GPIO_MODE_OUTPUT_PP;
-	/* Initialize Pull */
-	GPIO_C.Pull = GPIO_NOPULL;
-	/* Initialize Speed */
-	GPIO_C.Speed = GPIO_SPEED_HIGH;
+//------------------------------------------------------------------------------------
+// GPIO Init (DEBUG)
+//------------------------------------------------------------------------------------
+//void GPIO_Init( void )
+//{
+//	// Initialize C6 C7 for debug purposes: toggle when ADC triggers
+//	GPIO_InitTypeDef GPIO_C;
+//    // enable the GPIO port peripheral clock
+//	__HAL_RCC_GPIOC_CLK_ENABLE(); 	// Through HAL
+//	/* Initialize Pin Numbers */
+//	GPIO_C.Pin = GPIO_PIN_6 | GPIO_PIN_7;
+//	/* Initialize Pin Modes */
+//	GPIO_C.Mode = GPIO_MODE_OUTPUT_PP;
+//	/* Initialize Pull */
+//	GPIO_C.Pull = GPIO_NOPULL;
+//	/* Initialize Speed */
+//	GPIO_C.Speed = GPIO_SPEED_HIGH;
+//
+//	HAL_GPIO_Init(GPIOC, &GPIO_C);
+//
+//}
 
-	HAL_GPIO_Init(GPIOC, &GPIO_C);
 
-}
-
+//------------------------------------------------------------------------------------
+// MAIN Routine
+//------------------------------------------------------------------------------------
 int main() {
 	// Initialize the system
 	Sys_Init();
-	GPIO_Init();
+//	GPIO_Init(); // DEBUG
 	initTIM(&htim3, TIM3, TIM_CHANNEL_4);
 	initDAC(&hdac1, DAC1, DAC_CHANNEL_1);
 	initADC(&hadc1, ADC1, ADC_CHANNEL_6);
@@ -122,7 +140,9 @@ void reset_terminal() {
     fflush(stdout); // Need to flush stdout after using printf that doesn't end in \n
 }
 
-// -------------- DAC -----------------
+//------------------------------------------------------------------------------------
+// DAC
+//------------------------------------------------------------------------------------
 void initDAC(DAC_HandleTypeDef* hdac, DAC_TypeDef* Tgt,uint32_t chn)
 {
 	// Enable the DAC Clock.
@@ -157,7 +177,9 @@ void HAL_DAC_MspInit(DAC_HandleTypeDef *hdac)
 }
 
 
-// --------------- ADC --------------------
+//------------------------------------------------------------------------------------
+// ADC
+//------------------------------------------------------------------------------------
 void initADC(ADC_HandleTypeDef* hadc, ADC_TypeDef* Tgt, uint32_t chn)
 {
 	if (Tgt == ADC1) {
@@ -223,13 +245,11 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
 	if (hadc->Instance == ADC1) {
 		adc_x = HAL_ADC_GetValue(&hadc1);
 		adc_flags |= 1 << 1;
-		HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_6);
-//		printf("Entered Conversion Complete Callback, ADC1 = %d\r\n", (uint16_t) adc_x);
+//		HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_6); // DEBUG
 	} else if (hadc->Instance == ADC3) {
 		adc_y = HAL_ADC_GetValue(&hadc3);
 		adc_flags |= 1 << 3;
-		HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_7);
-//		printf("Entered Conversion Complete Callback, ADC3 = %d\r\n", (uint16_t) adc_y);
+//		HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_7); // DEBUG
 	}
 }
 
@@ -237,10 +257,11 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
 // Timer 3
 //------------------------------------------------------------------------------------
 
-
 void HAL_TIM_OC_MspInit(TIM_HandleTypeDef* htim) {
 	if (htim->Instance == TIM3) {
 		__HAL_RCC_TIM3_CLK_ENABLE();
+
+		// DEBUG: Output Clock to Arduino Ports (USE TIM3 CHANNEL 3)
 //		HAL_NVIC_SetPriority(TIM3_IRQn, 1, 3);
 //		HAL_NVIC_EnableIRQ(TIM3_IRQn);
 

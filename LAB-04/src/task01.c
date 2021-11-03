@@ -1,17 +1,26 @@
 //--------------------------------
-// Lab 4 - Sample - Lab04_sample.c
+// Lab 4 - Analog Conversion and Digital Signal Processing - task01.c
 //--------------------------------
-//
-// + Initial variable values printed on first PB press
+//	Simple Voltmeter: Sample a voltage on any ADC, calculate and display
+//	the values read by the ADC and the voltage.
 
-#define TERM_WIDTH 80
+
+//------------------------------------------------------------------------------------
+// Defines
+//------------------------------------------------------------------------------------
 #define TERM_HEIGHT 24
 #define VREF 0b111111111111UL // 4095
 
+//------------------------------------------------------------------------------------
+// Includes
+//------------------------------------------------------------------------------------
 #include "init.h"
 #include <stdio.h>
 #include <float.h>
 
+//------------------------------------------------------------------------------------
+// Global Variables
+//------------------------------------------------------------------------------------
 ADC_HandleTypeDef 		hADC;
 ADC_InitTypeDef			hinitADC;
 ADC_ChannelConfTypeDef 	sCONFIG;
@@ -20,6 +29,10 @@ GPIO_InitTypeDef		GPIO_A_ADC, GPIO_A_PB;
 double 		ADC_val, ADC_avg, ADC_hi, ADC_lo, ADC_vals[16];
 uint32_t 	ADC_hex = 0;
 uint8_t 	ind = 0;
+
+//------------------------------------------------------------------------------------
+// ADC Configuration and Initialization
+//------------------------------------------------------------------------------------
 
 void ADC_Config( void )
 {
@@ -75,6 +88,10 @@ void GPIO_Init( void )
 
 	HAL_GPIO_Init(GPIOA, &GPIO_A_PB);
 }
+
+//------------------------------------------------------------------------------------
+// Misc. Helper Functions
+//------------------------------------------------------------------------------------
 
 void Terminal_Init( void )
 {
@@ -132,7 +149,9 @@ void ADC_print( double val )
 	fflush(stdout);
 }
 
-// Main Execution Loop
+//------------------------------------------------------------------------------------
+// MAIN Routine
+//------------------------------------------------------------------------------------
 int main(void)
 {
 	//Initialize the system

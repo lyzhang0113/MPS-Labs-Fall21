@@ -1,13 +1,16 @@
 //--------------------------------
-// Lab 4 - Analog COnv. and Digital Signal Processing - task01.c
+// Lab 4 - Analog Conversion and Digital Signal Processing - task02.c
 //--------------------------------
-//
-//
+//	DAC Output: Convert digital values to analog signals and output them to DAC_OUT1
+
 
 // ADC1_CHANNEL6 ---> PA6 ---> Arduino A0
 // DAC_OUT1	     ---> PA4 ---> Arduino A1
 // DAC_OUT2 is shared with the USB 2.0 On-the-Go host controller thus not used
 
+//------------------------------------------------------------------------------------
+// Defines
+//------------------------------------------------------------------------------------
 #define TERM_WIDTH 80
 #define TERM_HEIGHT 24
 
@@ -15,21 +18,31 @@
 #define KEY_2 0x32
 #define KEY_3 0x33
 
+//------------------------------------------------------------------------------------
+// Includes
+//------------------------------------------------------------------------------------
 #include "init.h"
 #include <stdio.h>
 
+//------------------------------------------------------------------------------------
+// Prototypes
+//------------------------------------------------------------------------------------
 void initDAC1(DAC_HandleTypeDef* hdac);
 void initADC1(ADC_HandleTypeDef* hadc);
 void Terminal_Init();
 void erase_line(uint8_t line_num);
 void print_banner(char* msg, uint8_t line_num, uint8_t beep);
 
-
+//------------------------------------------------------------------------------------
+// Global Variables
+//------------------------------------------------------------------------------------
 DAC_HandleTypeDef hdac1;
 ADC_HandleTypeDef hadc1;
 uint16_t dac_out = 0x00;
 
-// Main Execution Loop
+//------------------------------------------------------------------------------------
+// MAIN Routine
+//------------------------------------------------------------------------------------
 int main(void)
 {
 	//Initialize the system
@@ -83,6 +96,9 @@ int main(void)
 	}
 }
 
+//------------------------------------------------------------------------------------
+// Misc. Helper Functions
+//------------------------------------------------------------------------------------
 void Terminal_Init() {
     printf("\033[0m\033[2J\033[;H"); // Erase screen & move cursor to home position
     fflush(stdout); // Need to flush stdout after using printf that doesn't end in \n
@@ -101,7 +117,9 @@ void print_banner(char* msg, uint8_t line_num, uint8_t beep) {
 	fflush(stdout);
 }
 
-// -------------- DAC -----------------
+//------------------------------------------------------------------------------------
+// DAC
+//------------------------------------------------------------------------------------
 void initDAC1(DAC_HandleTypeDef* hdac)
 {
 	// Enable the DAC Clock.
@@ -139,7 +157,9 @@ void HAL_DAC_MspInit(DAC_HandleTypeDef *hdac)
 
 }
 
-// --------------- ADC --------------------
+//------------------------------------------------------------------------------------
+// ADC
+//------------------------------------------------------------------------------------
 void initADC1(ADC_HandleTypeDef* hadc)
 {
 	__ADC1_CLK_ENABLE();
