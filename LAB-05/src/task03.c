@@ -48,9 +48,14 @@ int main() {
 	// Load Float Constants: s1=0.312500; s2=0.240385; s3=0.296875
 	asm("VLDR.F32 s1, =0x3EA00000 \r\n VLDR.F32 s2, =0x3E76277C \r\n VLDR.F32 s3, =0x3E980000");
 
-	HAL_ADC_Start_DMA(&hadc1, &adc_reading, 1);
+	HAL_ADC_Start_DMA(&hadc1, &adc_reading, sizeof(uint32_t));
 
 	while (1) ;
+}
+
+// DMA
+void DMA2_Stream0_IRQHandler() { // ADC
+	HAL_DMA_IRQHandler(&hdmaadc1);
 }
 
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
@@ -115,6 +120,7 @@ void HAL_DAC_MspInit(DAC_HandleTypeDef *hdac)
 //------------------------------------------------------------------------------------
 void ADC_Init(ADC_HandleTypeDef* hadc, ADC_TypeDef* Tgt, uint32_t Chn)
 {
+
 	__ADC1_CLK_ENABLE();
 
 	hadc->Instance 					= Tgt;
@@ -124,12 +130,15 @@ void ADC_Init(ADC_HandleTypeDef* hadc, ADC_TypeDef* Tgt, uint32_t Chn)
 	hadc->Init.ExternalTrigConv 	= ADC_SOFTWARE_START;
 	hadc->Init.ContinuousConvMode 	= ENABLE; // Continuously Trigger ADC Conversion
 	hadc->Init.ScanConvMode 		= DISABLE;
-	hadc->DMA_Handle 				= &hdmaadc1;
+	hadc->Init.NbrOfConversion		= 1;
+//	hadc->DMA_Handle 				= &hdmaadc1;
+	hadc->Init.DMAContinuousRequests= ENABLE;
+	hadc->Init.EOCSelection			= ADC_EOC_SEQ_CONV;
 
 	HAL_ADC_Init(hadc);
 
 	ADC1Config.Channel 		= Chn;
-	ADC1Config.SamplingTime = ADC_SAMPLETIME_3CYCLES;
+	ADC1Config.SamplingTime = ADC_SAMPLETIME_15CYCLES;
 	ADC1Config.Rank 		= ADC_REGULAR_RANK_1;
 	HAL_ADC_ConfigChannel(&hadc1, &ADC1Config);
 }
@@ -139,6 +148,7 @@ void HAL_ADC_MspInit(ADC_HandleTypeDef *hadc)
 	GPIO_InitTypeDef GPIO_InitStruct;
 
 	if (hadc->Instance == ADC1) {
+		__ADC1_CLK_ENABLE();
 		__GPIOA_CLK_ENABLE();
 
 		GPIO_InitStruct.Mode 	= GPIO_MODE_ANALOG;
@@ -149,13 +159,18 @@ void HAL_ADC_MspInit(ADC_HandleTypeDef *hadc)
 		HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
 		// DMA
+		__DMA2_CLK_ENABLE();
 		hdmaadc1.Instance 				= DMA2_Stream0;
-//		hdmaadc1.Instance 				= DMA2_Stream4;
+	//		hdmaadc1.Instance 				= DMA2_Stream4;
 		hdmaadc1.Init.Channel 			= DMA_CHANNEL_0;
+		hdmaadc1.Init.PeriphInc 		= DMA_PINC_ENABLE;
 		hdmaadc1.Init.Direction 		= DMA_PERIPH_TO_MEMORY;
 		hdmaadc1.Init.Mode 				= DMA_CIRCULAR; // Keep writing new ADC reading to same memloc
 		hdmaadc1.Init.MemDataAlignment 	= DMA_MDATAALIGN_WORD; // 32 bit
+		hdmaadc1.Init.MemInc			= DMA_MINC_ENABLE;
+		hdmaadc1.Init.FIFOMode 			= DMA_FIFOMODE_DISABLE; // Using DIRECT Mode
 		HAL_DMA_Init(&hdmaadc1);
+		__HAL_LINKDMA(hadc, DMA_Handle, hdmaadc1);
 
 		HAL_NVIC_SetPriority(DMA2_Stream0_IRQn, 0, 0);
 		HAL_NVIC_EnableIRQ(DMA2_Stream0_IRQn);

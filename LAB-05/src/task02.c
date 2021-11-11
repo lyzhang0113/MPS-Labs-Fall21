@@ -8,7 +8,7 @@
 // Defines
 //------------------------------------------------------------------------------------
 #define TERM_HEIGHT 24
-#define NEW_LINE 0x0A
+#define NEW_LINE 0x0D
 #define BUFFER_SIZE 100
 //------------------------------------------------------------------------------------
 // Includes
@@ -31,6 +31,7 @@ uint8_t uart_getchar_with_timeout(UART_HandleTypeDef *huart, uint8_t echo, uint3
 //------------------------------------------------------------------------------------
 SPI_HandleTypeDef hspi2;
 DMA_HandleTypeDef hdmatx2, hdmarx2;
+
 uint8_t RxBuf[BUFFER_SIZE] = {0};
 uint8_t TxBuf[BUFFER_SIZE] = {0};
 uint16_t num_char = 0;
@@ -42,7 +43,7 @@ int main(void) {
 	// Initialize the system
 	Sys_Init();
 	TerminalInit();
-	initSPI(&hspi2, SPI2);
+	SPI_Init(&hspi2, SPI2);
 	DMA_Init();
 //	HAL_SPI_TransmitReceive_DMA(&hspi2, TxBuf, RxBuf, BUFFER_SIZE);
 
@@ -67,9 +68,14 @@ int main(void) {
 	}
 }
 void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *hspi) {
-	printf("\033[14;20H (%d)\r\n\033[2K", num_char - 1);	// Print in SPI area
+	printf("\033[14;20H (%d)     \r\n\033[2K", num_char);	// Print in SPI area
 	for (uint8_t i = 0; i < num_char; i++) {
 		printf("%c", RxBuf[i]);
+	}
+//	fflush(stdout);
+	printf("\033[4;21H (%d)     \r\n\033[2K", num_char);	// Print in UART area
+	for (uint8_t i = 0; i < num_char; i++) {
+		printf("%c", TxBuf[i]);
 	}
 	fflush(stdout);
 }
@@ -113,11 +119,6 @@ void DMA1_Stream1_IRQHandler() { // RX
 
 void DMA1_Stream6_IRQHandler() { // TX
 	HAL_DMA_IRQHandler(&hdmatx2);
-	printf("\033[4;21H (%d)\r\n\033[2K", num_char - 1);	// Print in UART area
-	for (uint8_t i = 0; i < num_char; i++) {
-		printf("%c", TxBuf[i]);
-	}
-	fflush(stdout);
 }
 
 
