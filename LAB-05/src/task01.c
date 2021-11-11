@@ -8,6 +8,8 @@
  * 	- Adding Abort to end of callback
  * 	- infinite while loop after HAL_DMA_START so that program doesn't terminate
  * 	- Weird printing from callback
+ * 	- Needed individual IRQs for each stream
+ * 	- Peripheral increment REQUIRES enable for Mem to Mem mode
  *
  */
 
@@ -65,7 +67,7 @@ void DMA_Init( void )
 	// 8 bit =============================================================
 	initDMA_8.Channel 			= DMA_CHANNEL_1;
 	initDMA_8.Direction			= DMA_MEMORY_TO_MEMORY;
-	initDMA_8.PeriphInc 		= DMA_PINC_DISABLE;
+	initDMA_8.PeriphInc 		= DMA_PINC_ENABLE;
 	initDMA_8.MemInc			= DMA_MINC_ENABLE;
 	initDMA_8.Mode				= DMA_NORMAL;
 	initDMA_8.MemDataAlignment	= DMA_MDATAALIGN_BYTE;
@@ -86,7 +88,7 @@ void DMA_Init( void )
 	// 16 bit ============================================================
 	initDMA_16.Channel 			= DMA_CHANNEL_3;
 	initDMA_16.Direction		= DMA_MEMORY_TO_MEMORY;
-	initDMA_16.PeriphInc 		= DMA_PINC_DISABLE;
+	initDMA_16.PeriphInc 		= DMA_PINC_ENABLE;
 	initDMA_16.MemInc			= DMA_MINC_ENABLE;
 	initDMA_16.Mode				= DMA_NORMAL;
 	initDMA_16.MemDataAlignment	= DMA_MDATAALIGN_HALFWORD;
@@ -106,7 +108,7 @@ void DMA_Init( void )
 	// 32 bit ============================================================
 	initDMA_32.Channel 			= DMA_CHANNEL_2;
 	initDMA_32.Direction		= DMA_MEMORY_TO_MEMORY;
-	initDMA_32.PeriphInc 		= DMA_PINC_DISABLE;
+	initDMA_32.PeriphInc 		= DMA_PINC_ENABLE;
 	initDMA_32.MemInc			= DMA_MINC_ENABLE;
 	initDMA_32.Mode				= DMA_NORMAL;
 	initDMA_32.MemDataAlignment	= DMA_MDATAALIGN_WORD;
@@ -124,20 +126,16 @@ void DMA_Init( void )
 	HAL_NVIC_EnableIRQ	(DMA2_Stream2_IRQn);
 }
 
-void DMA2_Stream0_IRQHandler( void )
-{
-	HAL_DMA_IRQHandler(&hdma2_8b);
-}
+void DMA2_Stream0_IRQHandler( void )	{ HAL_DMA_IRQHandler(&hdma2_8b); }
+void DMA2_Stream1_IRQHandler( void ) 	{ HAL_DMA_IRQHandler(&hdma2_16b); }
+void DMA2_Stream2_IRQHandler( void )	{ HAL_DMA_IRQHandler(&hdma2_32b); }
 
 void HAL_DMA2_XferCpltCallback( DMA_HandleTypeDef * hdma )
 {
-	if (hdma->Instance != DMA2_Stream0) { printf("DEBUG!\r\n"); }
-
 	cycles = DWT->CYCCNT;
 	printf("\tDMA Implementation: %ld cycles\r\n", cycles);
 
 	cycles = 0;
-	HAL_DMA_Abort_IT(hdma);
 	DMA_NOT_DONE = 0;
 }
 
@@ -230,19 +228,19 @@ void test16bit( void )
 
 	while (DMA_NOT_DONE);
 	DMA_NOT_DONE = 1;
-/*
+
 	//===============================================================================
 	printf("Moving arrays of Size 100 -\r\n");
 
 	DWT->CYCCNT = 0;
-	memcpy(sw_buf2, u8_100, 100*sizeof(uint8_t));
+	memcpy(sw_buf2, u16_100, 100*sizeof(uint16_t));
 	cycles = DWT->CYCCNT;
 	printf("\tSofware Implementation: %ld cycles\r\n", cycles);
 
 	HAL_Delay(1000);
 
 	DWT->CYCCNT = 0;
-	HAL_DMA_Start_IT(&hdma2_8b, u8_100, a2, 100 * sizeof(uint8_t));
+	HAL_DMA_Start_IT(&hdma2_16b, u16_100, b2, 100 * sizeof(uint16_t));
 
 	while (DMA_NOT_DONE);
 	DMA_NOT_DONE = 1;
@@ -251,26 +249,89 @@ void test16bit( void )
 	printf("Moving arrays of Size 1000 -\r\n");
 
 	DWT->CYCCNT = 0;
-	memcpy(sw_buf3, u8_1000, 1000*sizeof(uint8_t));
+	memcpy(sw_buf3, u16_1000, 1000*sizeof(uint16_t));
 	cycles = DWT->CYCCNT;
 	printf("\tSofware Implementation: %ld cycles\r\n", cycles);
 
 	HAL_Delay(1000);
 
 	DWT->CYCCNT = 0;
-	HAL_DMA_Start_IT(&hdma2_8b, u8_1000, a3, 1000 * sizeof(uint8_t));
+	HAL_DMA_Start_IT(&hdma2_16b, u16_1000, b3, 1000 * sizeof(uint16_t));
 
 	while (DMA_NOT_DONE);
 	DMA_NOT_DONE = 1;
 
 	printf("\r\n");
-*/
+
 	free(sw_buf1);
 	free(sw_buf2);
 	free(sw_buf3);
-
-
 }
+
+void test32bit( void )
+{
+	uint32_t *sw_buf1, *sw_buf2, *sw_buf3;
+	sw_buf1 = (uint32_t *)malloc(10 * sizeof(uint32_t));
+	sw_buf2 = (uint32_t *)malloc(100 * sizeof(uint32_t));
+	sw_buf3 = (uint32_t *)malloc(1000 * sizeof(uint32_t));
+
+	printf("\033[26;1H*********** Unsigned 32-bit Integers (uint32_t) ***********\r\n");
+
+	//===============================================================================
+	printf("Moving arrays of Size 10 -\r\n");
+
+	DWT->CYCCNT = 0;
+	memcpy(sw_buf1, u32_10, 10*sizeof(uint32_t));
+	cycles = DWT->CYCCNT;
+	printf("\tSofware Implementation: %ld cycles\r\n", cycles);
+
+	HAL_Delay(1000);
+
+	DWT->CYCCNT = 0;
+	HAL_DMA_Start_IT(&hdma2_32b, u32_10, c1, 10 * sizeof(uint32_t));
+
+	while (DMA_NOT_DONE);
+	DMA_NOT_DONE = 1;
+
+	//===============================================================================
+	printf("Moving arrays of Size 100 -\r\n");
+
+	DWT->CYCCNT = 0;
+	memcpy(sw_buf2, u32_100, 100*sizeof(uint32_t));
+	cycles = DWT->CYCCNT;
+	printf("\tSofware Implementation: %ld cycles\r\n", cycles);
+
+	HAL_Delay(1000);
+
+	DWT->CYCCNT = 0;
+	HAL_DMA_Start_IT(&hdma2_32b, u32_100, c2, 100 * sizeof(uint32_t));
+
+	while (DMA_NOT_DONE);
+	DMA_NOT_DONE = 1;
+
+	//===============================================================================
+	printf("Moving arrays of Size 1000 -\r\n");
+
+	DWT->CYCCNT = 0;
+	memcpy(sw_buf3, u32_1000, 1000*sizeof(uint32_t));
+	cycles = DWT->CYCCNT;
+	printf("\tSofware Implementation: %ld cycles\r\n", cycles);
+
+	HAL_Delay(1000);
+
+	DWT->CYCCNT = 0;
+	HAL_DMA_Start_IT(&hdma2_32b, u32_1000, c3, 1000 * sizeof(uint32_t));
+
+	while (DMA_NOT_DONE);
+	DMA_NOT_DONE = 1;
+
+	printf("\r\n");
+
+	free(sw_buf1);
+	free(sw_buf2);
+	free(sw_buf3);
+}
+
 
 int main(void)
 {
@@ -300,12 +361,8 @@ int main(void)
 
 	test8bit();
 	test16bit();
+	test32bit();
 
-//	DWT->CYCCNT = 0;
-//	HAL_DMA_Start_IT(&hdma2_16b, u16_10[0], b1[0], 10*sizeof(uint16_t));
-//
-//	DWT->CYCCNT = 0;
-//	HAL_DMA_Start_IT(&hdma2_32b, u32_10[0], c1[0], 10*sizeof(uint32_t));
 	while (1);
 }
 
