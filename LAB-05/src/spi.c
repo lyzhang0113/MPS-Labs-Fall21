@@ -52,7 +52,7 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef *hspi)
 }
 
 
-void initSPI(SPI_HandleTypeDef* hspi, SPI_TypeDef* Tgt) {
+void SPI_Init(SPI_HandleTypeDef* hspi, SPI_TypeDef* Tgt) {
 	hspi->Instance               = Tgt;
 	hspi->Init.Mode              = SPI_MODE_MASTER;
 	hspi->Init.Direction         = SPI_DIRECTION_2LINES;
@@ -71,6 +71,4 @@ void initSPI(SPI_HandleTypeDef* hspi, SPI_TypeDef* Tgt) {
 	HAL_SPI_Init(hspi);
 
 }
-
-
 
