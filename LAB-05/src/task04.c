@@ -256,9 +256,9 @@ void DMA2_Stream0_IRQHandler() { // ADC
 void TIM2_Init(TIM_HandleTypeDef* htim, TIM_TypeDef* Tgt) {
 	__TIM2_CLK_ENABLE();
 	htim->Instance = Tgt;
-	htim->Init.Prescaler = (uint32_t) 54; // 108MHz
+	htim->Init.Prescaler = (uint32_t) 108; // 108MHz
 	htim->Init.CounterMode = TIM_COUNTERMODE_UP;
-	htim->Init.Period = (uint32_t) 2;
+	htim->Init.Period = (uint32_t) 10;
 	htim->Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
 	HAL_TIM_Base_Init(htim);
 
