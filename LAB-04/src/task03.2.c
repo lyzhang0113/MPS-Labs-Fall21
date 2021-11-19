@@ -31,7 +31,7 @@ int main(void)
 	reset_terminal();
 
 	// Task Set 1:
-	printf("********** Task Set 1 **********\r\n\n");
+	printf("********** Task Set 2 **********\r\n\n");
 
 	/* 1. 	Use Basic Inline Assembly:
 	 * 			Load into registers

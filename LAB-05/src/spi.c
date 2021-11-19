@@ -1,5 +1,5 @@
 //----------------------------------
-// Lab 5 -  - spi.c
+// Lab 5 - Direct Memory Access - spi.c
 //----------------------------------
 //
 // Helper functions for SPI

@@ -1,13 +1,12 @@
 //--------------------------------
 // Lab 5 - Direct Memory Access - task03.c
 //--------------------------------
-//	IIR Filter Implementation: Use ADC and DAC, make an IIR filter with designated
-//	response. Assembly math could be used for faster calculation purposes thus
-//	better results.
+//	IIR Filter DMA: Modify Lab 4 Task 4's code to implement a circular DMA stream
+//		for the ADC only, transferring one sample at a time.
 //	+ Use DMA
 
 // ADC1_CHANNEL6 ---> PA6 ---> Arduino A0
-// DAC1_CHANNEL1 ---> PA4 ---> Arduino A1
+// DAC1_CHANNEL1 ---> PA4 ---> Arduino A1 (Not Used)
 
 // ADC1: DMA2 Channel 0 Stream 0 or 4
 
@@ -53,7 +52,9 @@ int main() {
 	while (1) ;
 }
 
-// DMA
+//------------------------------------------------------------------------------------
+// IRQHandler & Callbacks
+//------------------------------------------------------------------------------------
 void DMA2_Stream0_IRQHandler() { // ADC
 	HAL_DMA_IRQHandler(&hdmaadc1);
 }
@@ -74,6 +75,7 @@ void Term_Init(void) {
     printf("\033[0m\033[2J\033[;H\033[r"); // Erase screen & move cursor to home position
     fflush(stdout); // Need to flush stdout after using printf that doesn't end in \n
 }
+
 //------------------------------------------------------------------------------------
 // DAC
 //------------------------------------------------------------------------------------
@@ -87,11 +89,11 @@ void DAC_Init(DAC_HandleTypeDef* hdac, DAC_TypeDef* Tgt, uint32_t Chn)
 	HAL_DAC_Init(hdac); // Initialize the DAC
 
 	// Configure the DAC channel
-	DAC_ChannelConfTypeDef DAC1Config;
-	DAC1Config.DAC_Trigger 		= DAC_TRIGGER_NONE;
-//	DAC1Config.DAC_OutputBuffer = DAC_OUTPUTBUFFER_DISABLE;
+	DAC_ChannelConfTypeDef sConfig;
+	sConfig.DAC_Trigger 		= DAC_TRIGGER_NONE;
+//	sConfig.DAC_OutputBuffer = DAC_OUTPUTBUFFER_DISABLE;
 
-	HAL_DAC_ConfigChannel(hdac, &DAC1Config, Chn);
+	HAL_DAC_ConfigChannel(hdac, &sConfig, Chn);
 
 	HAL_DAC_Start(hdac, Chn);
 }

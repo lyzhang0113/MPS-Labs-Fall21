@@ -1,16 +1,23 @@
 //--------------------------------
-// Lab 5 - Direct Memory Access - task03.c
+// Lab 5 - Direct Memory Access - task04.c
 //--------------------------------
-//	IIR Filter Implementation: Use ADC and DAC, make an IIR filter with designated
-//	response. Assembly math could be used for faster calculation purposes thus
-//	better results.
-//	+ Use DMA
+//	[Depth] Improved IIR Filter DMA: Modify code in Lab 5 Task 3 to perform the
+//		following improvements:
+//			* Change the ADC DMA buffer sizes to be >1 (e.g., 1000)
+//			* Add a similarly sized DMA stream to control the DAC
+//			* Add a timer to trigger conversions on both thd ADC and DAC
+//			* Perform the filtering in chunks within the interrupt, processing
+//				transferred buffer while the other is captured/transmitted
 
 // ADC1_CHANNEL6 ---> PA6 ---> Arduino A0
 // DAC1_CHANNEL1 ---> PA4 ---> Arduino A1
 
 // ADC1: DMA2 Channel 0 Stream 0 or 4
 
+//------------------------------------------------------------------------------------
+// defines
+//------------------------------------------------------------------------------------
+#define BUFFER_SIZE 1000
 
 //------------------------------------------------------------------------------------
 // Includes
@@ -18,7 +25,6 @@
 #include <stdio.h>
 #include "init.h"
 
-#define BUFFER_SIZE 1000
 //------------------------------------------------------------------------------------
 // Prototypes
 //------------------------------------------------------------------------------------
@@ -27,47 +33,23 @@ void DAC_Init(DAC_HandleTypeDef* hdac, DAC_TypeDef* Tgt, uint32_t Chn);
 void ADC_Init(ADC_HandleTypeDef* hadc, ADC_TypeDef* Tgt, uint32_t Chn);
 void Term_Init();
 void filter();
+
 //------------------------------------------------------------------------------------
-// Global Variables
+// HandleTypeDefs
 //------------------------------------------------------------------------------------
 TIM_HandleTypeDef htim2;
 DAC_HandleTypeDef hdac1;
 ADC_HandleTypeDef hadc1;
-ADC_ChannelConfTypeDef ADC1Config;
 DMA_HandleTypeDef hdmaadc1, hdmadac1;
 
+//------------------------------------------------------------------------------------
+// Global Variables
+//------------------------------------------------------------------------------------
 uint32_t adc_reading[BUFFER_SIZE] = {0};
 uint32_t dac_response[BUFFER_SIZE] = {0};
 
 static volatile uint32_t *inBufPtr;
 static volatile uint32_t *outBufPtr;
-
-//void GPIO_Init( void )
-//{
-//	// Initialize C7 for debug purposes: toggle when ADC triggers
-//	GPIO_InitTypeDef GPIO_C;
-//    // enable the GPIO port peripheral clock
-//	__GPIOC_CLK_ENABLE(); 	// Through HAL
-//	/* Initialize Pin Numbers */
-//	GPIO_C.Pin = GPIO_PIN_7;
-//	/* Initialize Pin Modes */
-//	GPIO_C.Mode = GPIO_MODE_OUTPUT_PP;
-//	/* Initialize Pull */
-//	GPIO_C.Pull = GPIO_NOPULL;
-//	/* Initialize Speed */
-//	GPIO_C.Speed = GPIO_SPEED_HIGH;
-//
-//	HAL_GPIO_Init(GPIOC, &GPIO_C);
-//
-//}
-//
-//void print_buffer(uint32_t* buf) {
-//	for (uint16_t i = 0; i < BUFFER_SIZE; i++) {
-//		if (i % 15 == 0) printf("\r\n");
-//		printf("%6ld", buf[i]);
-//	}
-//	printf("\r\n");
-//}
 
 //------------------------------------------------------------------------------------
 // MAIN Routine
@@ -87,9 +69,7 @@ int main() {
 	HAL_ADC_Start_DMA(&hadc1, adc_reading, BUFFER_SIZE);
 	HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, dac_response, BUFFER_SIZE, DAC_ALIGN_12B_R);
 
-	while (1) {
-		filter();
-	}
+	while (1) ;
 }
 
 void filter() {
@@ -103,16 +83,20 @@ void filter() {
 	}
 }
 
+//------------------------------------------------------------------------------------
+// Callbacks
+//------------------------------------------------------------------------------------
+// Change in and out buffer pointer position
 void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef* hadc) {
 	inBufPtr = &adc_reading[0];
 	outBufPtr = &dac_response[BUFFER_SIZE/2];
-
+	filter();
 }
 
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
 	inBufPtr = &adc_reading[BUFFER_SIZE/2];
 	outBufPtr = &dac_response[0];
-
+	filter();
 }
 
 
@@ -123,6 +107,7 @@ void Term_Init(void) {
     printf("\033[0m\033[2J\033[;H\033[r"); // Erase screen & move cursor to home position
     fflush(stdout); // Need to flush stdout after using printf that doesn't end in \n
 }
+
 //------------------------------------------------------------------------------------
 // DAC
 //------------------------------------------------------------------------------------
@@ -177,6 +162,10 @@ void HAL_DAC_MspInit(DAC_HandleTypeDef *hdac)
 
 }
 
+void DMA1_Stream5_IRQHandler() { // DAC
+	HAL_DMA_IRQHandler(&hdmadac1);
+}
+
 //------------------------------------------------------------------------------------
 // ADC
 //------------------------------------------------------------------------------------
@@ -188,7 +177,6 @@ void ADC_Init(ADC_HandleTypeDef* hadc, ADC_TypeDef* Tgt, uint32_t Chn)
 	HAL_NVIC_SetPriority(DMA2_Stream0_IRQn, 1, 1);
 	HAL_NVIC_EnableIRQ(DMA2_Stream0_IRQn);
 	__DMA2_CLK_ENABLE();
-
 
 	hdmaadc1.Instance 				= DMA2_Stream0;
 //		hdmaadc1.Instance 				= DMA2_Stream4;
@@ -217,13 +205,13 @@ void ADC_Init(ADC_HandleTypeDef* hadc, ADC_TypeDef* Tgt, uint32_t Chn)
 //	hadc->DMA_Handle 				= &hdmaadc1;
 	hadc->Init.DMAContinuousRequests= ENABLE;
 	hadc->Init.EOCSelection			= ADC_EOC_SINGLE_CONV;
-
 	HAL_ADC_Init(hadc);
 
-	ADC1Config.Channel 		= Chn;
-	ADC1Config.SamplingTime = ADC_SAMPLETIME_28CYCLES;
-	ADC1Config.Rank 		= ADC_REGULAR_RANK_1;
-	HAL_ADC_ConfigChannel(&hadc1, &ADC1Config);
+	ADC_ChannelConfTypeDef sConfig;
+	sConfig.Channel 		= Chn;
+	sConfig.SamplingTime 	= ADC_SAMPLETIME_28CYCLES;
+	sConfig.Rank 			= ADC_REGULAR_RANK_1;
+	HAL_ADC_ConfigChannel(hadc, &sConfig);
 
 }
 
@@ -244,15 +232,13 @@ void HAL_ADC_MspInit(ADC_HandleTypeDef *hadc)
 	}
 }
 
-// DMA
-void DMA1_Stream5_IRQHandler() { // DAC
-	HAL_DMA_IRQHandler(&hdmadac1);
-}
 void DMA2_Stream0_IRQHandler() { // ADC
 	HAL_DMA_IRQHandler(&hdmaadc1);
 }
 
-// TIM 2
+//------------------------------------------------------------------------------------
+// Timer 2 Initialization
+//------------------------------------------------------------------------------------
 void TIM2_Init(TIM_HandleTypeDef* htim, TIM_TypeDef* Tgt) {
 	__TIM2_CLK_ENABLE();
 	htim->Instance = Tgt;
