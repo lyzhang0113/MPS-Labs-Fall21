@@ -18,7 +18,7 @@ USBH_HandleTypeDef husbh;
 void Term_Init();
 void USBH_UserProcess(USBH_HandleTypeDef *, uint8_t);
 
-uint8_t curr_color;
+uint8_t curr_color = 1;
 
 
 int main(void){
@@ -26,8 +26,6 @@ int main(void){
 	Sys_Init();
 	Term_Init();
 
-	// Application Initializations
-	curr_color = 1;
 	// USBH Driver Initialization
 	USBH_Init(&husbh, USBH_UserProcess, 0);
 	// USB Driver Class Registrations: Add device types to handle.
@@ -44,7 +42,7 @@ void USBH_UserProcess(USBH_HandleTypeDef *phost, uint8_t id) {
 	case HOST_USER_SELECT_CONFIGURATION:
 		break;
 	case HOST_USER_CLASS_ACTIVE:
-		Term_Init();
+//		Term_Init();
 		// A device has been attached and enumerated and is ready to use
 		break;
 	case HOST_USER_CLASS_SELECTED:
@@ -90,11 +88,11 @@ void USBH_HID_EventCallback(USBH_HandleTypeDef *phost) {
 
 	if (button_m) {
 		curr_color = ++curr_color % 7;
-	}
+	} else
 
 	if (button_l) {
 		printf("\033[%dm \033[D", curr_color + 41);
-	}
+	} else
 
 	if (button_r) {
 		printf("\033[40m \033[D");
