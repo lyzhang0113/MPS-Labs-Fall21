@@ -17,7 +17,6 @@ USBH_HandleTypeDef husbh;
 FATFS 	myFatFs;
 DIR 	root;
 FILINFO	fno;
-FRESULT fr;
 
 uint8_t poll_interval;
 uint8_t CONNECTED = 0;
@@ -39,10 +38,11 @@ int main(void){
 	USBH_RegisterClass(&husbh, USBH_MSC_CLASS);
 	USBH_RegisterClass(&husbh, USBH_HID_CLASS);
 
-	FATFS_LinkDriver(&USBH_Driver, "0:/");
-
 	// Start USBH Driver
 	USBH_Start(&husbh);
+
+	if ( FATFS_LinkDriver(&USBH_Driver, "0:") != 0 ) { printf("ERROR LINKING!\r\n"); }
+
 	while(1){
 		USBH_Process(&husbh);
 		// Other stuff
@@ -50,6 +50,8 @@ int main(void){
 }
 
 void USBH_UserProcess(USBH_HandleTypeDef *phost, uint8_t id) {
+	static FRESULT fr;
+
 	switch (id) {
 	case HOST_USER_SELECT_CONFIGURATION:
 		printf("HOST_USER_SELECT_CONFIGURATION\r\n");
@@ -59,8 +61,9 @@ void USBH_UserProcess(USBH_HandleTypeDef *phost, uint8_t id) {
 		// A device has been attached and enumerated and is ready to use
 		CONNECTED = 1;
 
-		if ( f_mount( &myFatFs, "0:/", 1) == FR_OK ) {
-			fr = f_findfirst(&root, &fno, "0:/", "*");
+		fr = f_mount( &myFatFs, "0:", 1);
+		if ( fr == FR_OK ) {
+			fr = f_findfirst(&root, &fno, "0:", "*");
 			if ( fr == FR_OK) {
 				printf("USB CONTENTS:\r\n");
 				while ( fr == FR_OK && fno.fname[0] ) {
@@ -79,7 +82,7 @@ void USBH_UserProcess(USBH_HandleTypeDef *phost, uint8_t id) {
 		printf("HOST_USER_CONNECTION\r\n");
 		break;
 	case HOST_USER_DISCONNECTION:
-//		Term_Init();
+		Term_Init();
 		printf("HOST_USER_DISCONNECTION\r\n");
 		CONNECTED = 0;
 		break;
@@ -101,7 +104,7 @@ void print_line( const FILINFO * fin )
 	WORD time = fin->ftime;
 
 	printf("%5.5s\t", (fin->fattrib == (BYTE)AM_DIR) ? "DIR":"FILE" ); fflush(stdout);
-	printf("%2.2d %2.2d %4.4d\t", (date & 0x000F), ((date>>4) & 0x000F), ((date>>16) & 0x00FF) ); fflush(stdout);
+	printf("%2.2d %2.2d %4.4d\t", (date & 0x000F), ((date>>4) & 0x000F), ((date>>16) & 0x00FF + 1980) ); fflush(stdout);
 	printf("%2.2d:%2.2d\t", (time>11), ((time>5) & 0x003F) ); fflush(stdout);
 	printf("%s\r\n", fin->fname);
 }
