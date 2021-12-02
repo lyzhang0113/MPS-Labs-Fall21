@@ -75,7 +75,7 @@ void initSPI(SPI_HandleTypeDef* hspi, SPI_TypeDef* Tgt) {
 //------------------------------------------------------------------------------------
 // Timer 7 Functions (for the 10us delay between transmitting/receiving)
 //------------------------------------------------------------------------------------
-/*
+
 
 void HAL_TIM_Base_MspInit(TIM_HandleTypeDef* htim) {
 	__HAL_RCC_TIM7_CLK_ENABLE();
@@ -83,7 +83,7 @@ void HAL_TIM_Base_MspInit(TIM_HandleTypeDef* htim) {
 	HAL_NVIC_EnableIRQ(TIM7_IRQn);
 }
 
-void Timer_Init( void ) {
+void Timer_Init() {
 	htim7.Instance = TIM7;
 	htim7.Init.Prescaler = (uint32_t) 108; // 108Mhz / 108 = 1MHz
 	htim7.Init.CounterMode = TIM_COUNTERMODE_UP;
@@ -103,12 +103,12 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
 		curr_time_in_micro++;
 	}
 }
-*/
 
 void wait_us(uint32_t us) {
 	curr_time_in_micro = 0;
 	while (curr_time_in_micro < us) ;
 }
+
 //------------------------------------------------------------------------------------
 // SPI Read/Write
 //------------------------------------------------------------------------------------
