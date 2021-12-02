@@ -5,22 +5,36 @@
 //
 #define BUFFER_SIZE 100
 #include "init.h"
+#include "bluetooth.h"
 
+char uart_getchar_it(UART_HandleTypeDef *huart, uint8_t echo);
 void BT_Connect();
 char BT_TransmitReceive(char c);
 void Term_Init(void);
 
 char uart_rx[BUFFER_SIZE] = {0};
-UART_HandleTypeDef uart6;
+UART_HandleTypeDef bt;
 
 
 int main(void) {
 	Sys_Init();
 	Term_Init();
-	initUart(&uart6, 9600, USART6);
-	BT_Connect();
+	BT_Init(&bt);
+
+	BT_Connect(&bt);
+
+
 }
 
+void USART6_IRQHandler( void ) { HAL_UART_IRQHandler(&bt); }
+
+void HAL_UART_RxCpltCallback( UART_HandleTypeDef *huart )
+{
+	if (huart->Instance == USART6)
+	{
+		char in = uart_getchar_it(&bt, 0);
+	}
+}
 
 void Term_Init(void)
 {
@@ -28,17 +42,4 @@ void Term_Init(void)
     fflush(stdout); // Need to flush stdout after using printf that doesn't end in \n
 }
 
-char BT_TransmitReceive(char c) {
-	char rx[1] = {NULL};
-	HAL_UART_Transmit(&uart6, &c, 1, 100);
-	HAL_UART_Receive(&uart6, (uint8_t *)rx, 1, 100);
-	return (char) rx[0];
-}
 
-void BT_Connect() {
-	while (1) {
-		HAL_Delay(1000);
-		if (BT_TransmitReceive('p') == 'p') break;
-	}
-	printf("Connected\r\n");
-}

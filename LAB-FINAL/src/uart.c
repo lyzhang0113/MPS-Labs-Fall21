@@ -114,6 +114,14 @@ char uart_getchar(UART_HandleTypeDef *huart, uint8_t echo) {
 	return (char)input[0];
 }
 
+// Get one character
+// 'echo' means enable (1) or disable (0) echoing of characters
+char uart_getchar_it(UART_HandleTypeDef *huart, uint8_t echo) {
+	char input[1];
+	HAL_UART_Receive_IT(huart, (uint8_t *)input, 1);
+	if (echo) HAL_UART_Transmit(huart, (uint8_t*) input, 1, 1000);
+	return (char)input[0];
+}
 // Send one character
 void uart_putchar(UART_HandleTypeDef *huart, char * input) {
 	HAL_UART_Transmit(huart, (uint8_t*) input, 1, 1000);
