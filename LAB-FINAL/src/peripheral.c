@@ -14,7 +14,7 @@ void Interrupt_Init	( void );		// Sets up Interrupts
 
 void BT_Configure	( char* instruction );
 
-void uart_read(UART_HandleTypeDef *huart, uint32_t timeout);
+void uart_read	( UART_HandleTypeDef *huart, uint32_t timeout );
 
 void print_buf	( char *buf, uint32_t size );	// Prints contents of buffer
 
@@ -38,10 +38,7 @@ int main(void){
 	// Read the README in the base directory of this project.
 	while (1)
 	{
-		uart_read(&huart6, 100);
-		if (uart_rx[0] == 'p') {
-			HAL_UART_Transmit(&huart6, uart_rx, 1, 100);
-		}
+
 	}
 }
 
