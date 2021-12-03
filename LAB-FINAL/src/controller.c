@@ -3,7 +3,8 @@
 //--------------------------------
 //
 //
-#define BUFFER_SIZE 100
+
+#include <stdio.h>
 #include "init.h"
 #include "bluetooth.h"
 
@@ -12,7 +13,6 @@ void BT_Connect();
 char BT_TransmitReceive(char c);
 void Term_Init(void);
 
-char uart_rx[BUFFER_SIZE] = {0};
 UART_HandleTypeDef bt;
 
 
@@ -22,6 +22,13 @@ int main(void) {
 	BT_Init(&bt);
 
 	BT_Connect(&bt);
+
+	uart_getchar_it(&bt, 0);
+
+	while (1) {
+		char input = uart_getchar(&USB_UART, 1);
+		BT_Transmit(&bt, input);
+	}
 
 
 }
@@ -33,6 +40,10 @@ void HAL_UART_RxCpltCallback( UART_HandleTypeDef *huart )
 	if (huart->Instance == USART6)
 	{
 		char in = uart_getchar_it(&bt, 0);
+		switch (in) {
+		default:
+			break;
+		}
 	}
 }
 
