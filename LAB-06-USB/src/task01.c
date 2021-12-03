@@ -1,9 +1,10 @@
 //--------------------------------
-// Microprocessor Systems Lab 6 - Template - Lab06_p1_sample.c
+// Lab 6 - Universal Serial Bus - task01.c
 //--------------------------------
-//
-//
 
+//------------------------------------------------------------------------------------
+// Includes
+//------------------------------------------------------------------------------------
 #include <stdio.h>
 
 #include "init.h"
@@ -13,14 +14,21 @@
 #include "ff_gen_drv.h"
 #include "usbh_diskio.h"
 
-USBH_HandleTypeDef husbh;
-
+//------------------------------------------------------------------------------------
+// Prototypes
+//------------------------------------------------------------------------------------
 void Term_Init();
 void USBH_UserProcess(USBH_HandleTypeDef *, uint8_t);
 
+//------------------------------------------------------------------------------------
+// Global Variables
+//------------------------------------------------------------------------------------
+USBH_HandleTypeDef husbh;
 uint8_t curr_color = 1;
 
-
+//------------------------------------------------------------------------------------
+// MAIN Routine
+//------------------------------------------------------------------------------------
 int main(void){
 	 // System Initializations
 	Sys_Init();
@@ -37,6 +45,9 @@ int main(void){
 	}
 }
 
+//------------------------------------------------------------------------------------
+// Custom USB UserProcess
+//------------------------------------------------------------------------------------
 void USBH_UserProcess(USBH_HandleTypeDef *phost, uint8_t id) {
 	switch (id) {
 	case HOST_USER_SELECT_CONFIGURATION:
@@ -57,12 +68,17 @@ void USBH_UserProcess(USBH_HandleTypeDef *phost, uint8_t id) {
 	}
 }
 
+//------------------------------------------------------------------------------------
+// Misc. Helper Functions
+//------------------------------------------------------------------------------------
 void Term_Init(void) {
     printf("\033[0m\033[2J\033[;H\033[r"); // Erase screen & move cursor to home position
     fflush(stdout); // Need to flush stdout after using printf that doesn't end in \n
 }
-// Interrupts and Callbacks...
 
+//------------------------------------------------------------------------------------
+// USB HID Callback
+//------------------------------------------------------------------------------------
 void USBH_HID_EventCallback(USBH_HandleTypeDef *phost) {
 	HID_MOUSE_Info_TypeDef* mouse_info;
 	mouse_info = USBH_HID_GetMouseInfo(&husbh);

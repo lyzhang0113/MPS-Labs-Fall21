@@ -1,9 +1,10 @@
 //--------------------------------
-// Microprocessor Systems Lab 6 - Template - Lab06_p1_sample.c
+// Lab 6 - Universal Serial Bus - task02.c
 //--------------------------------
-//
-//
 
+//------------------------------------------------------------------------------------
+// Includes
+//------------------------------------------------------------------------------------
 #include <stdio.h>
 
 #include "init.h"
@@ -13,6 +14,16 @@
 #include "ff_gen_drv.h"
 #include "usbh_diskio.h"
 
+//------------------------------------------------------------------------------------
+// Prototypes
+//------------------------------------------------------------------------------------
+void Term_Init();
+void USBH_UserProcess(USBH_HandleTypeDef *, uint8_t);
+void print_line( const FILINFO * fin );
+
+//------------------------------------------------------------------------------------
+// Global Variables
+//------------------------------------------------------------------------------------
 USBH_HandleTypeDef husbh;
 FATFS 	myFatFs;
 DIR 	root;
@@ -22,10 +33,9 @@ uint8_t poll_interval;
 uint8_t CONNECTED = 0;
 uint8_t curr_color = 1;
 
-void Term_Init();
-void USBH_UserProcess(USBH_HandleTypeDef *, uint8_t);
-void print_line( const FILINFO * fin );
-
+//------------------------------------------------------------------------------------
+// MAIN Routine
+//------------------------------------------------------------------------------------
 int main(void){
 	 // System Initializations
 	Sys_Init();
@@ -49,6 +59,9 @@ int main(void){
 	}
 }
 
+//------------------------------------------------------------------------------------
+// Custom USB UserProcess
+//------------------------------------------------------------------------------------
 void USBH_UserProcess(USBH_HandleTypeDef *phost, uint8_t id) {
 	static FRESULT fr;
 
@@ -92,6 +105,9 @@ void USBH_UserProcess(USBH_HandleTypeDef *phost, uint8_t id) {
 	}
 }
 
+//------------------------------------------------------------------------------------
+// Misc. Helper Functions
+//------------------------------------------------------------------------------------
 void Term_Init(void)
 {
     printf("\033[0m\033[2J\033[;H\033[r"); // Erase screen & move cursor to home position
@@ -109,7 +125,9 @@ void print_line( const FILINFO * fin )
 	printf("%s\r\n", fin->fname);
 }
 
-// Interrupts and Callbacks...
+//------------------------------------------------------------------------------------
+// USB HID Callback
+//------------------------------------------------------------------------------------
 void USBH_HID_EventCallback(USBH_HandleTypeDef *phost) {
 	HID_MOUSE_Info_TypeDef* mouse_info;
 	mouse_info = USBH_HID_GetMouseInfo(&husbh);
