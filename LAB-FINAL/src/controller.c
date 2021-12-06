@@ -7,11 +7,22 @@
 // ADC1_CHANNEL6 ---> PA6 ---> Arduino A0
 // ADC3_CHANNEL8 ---> PF10 --> Arduino A3
 
+#define CALIBRATION 0
+
+#define NEU_X 1179
+#define NEU_Y 1157
+#define MIN_X 6
+#define MIN_Y 7
+#define MAX_X 3749
+#define MAX_Y 3878
+
 #include <stdio.h>
 #include <stdlib.h>
+#include "../Libraries/BSP/STM32F769I-Discovery/stm32f769i_discovery_lcd.h"
 #include "init.h"
 #include "bluetooth.h"
 
+void LCD_Init(void);
 void TIM2_Init(TIM_HandleTypeDef* htim, TIM_TypeDef* Tgt);
 void ADC_Init(ADC_HandleTypeDef* hadc, ADC_TypeDef* Tgt, uint32_t Chn, DMA_HandleTypeDef* hdma);
 
@@ -20,13 +31,16 @@ void Calibrate_Joystick(uint32_t round);
 void Term_Init(void);
 
 UART_HandleTypeDef bt;
+
 TIM_HandleTypeDef htim2;
 ADC_HandleTypeDef hadc1, hadc3;
 DMA_HandleTypeDef hdmaadc1, hdmaadc3;
 
+uint8_t adc_flags;
 uint32_t raw_x, raw_y;
 uint32_t neu_x, neu_y, max_x, min_x, max_y, min_y;
 int8_t adj_x, adj_y;
+
 
 int main(void) {
 	// Initialization
@@ -36,25 +50,72 @@ int main(void) {
 	ADC_Init(&hadc1, ADC1, ADC_CHANNEL_6, &hdmaadc1);
 	ADC_Init(&hadc3, ADC3, ADC_CHANNEL_8, &hdmaadc3);
 	TIM2_Init(&htim2, TIM2);
+	LCD_Init();
 
 	// Start Necessary Components
 //	BT_Connect(&bt);
-	uart_getchar_it(&bt, 0);
+//	uart_getchar_it(&bt, 0);
 	HAL_TIM_Base_Start(&htim2);
 	HAL_ADC_Start_DMA(&hadc1, &raw_x, sizeof(uint32_t));
 	HAL_ADC_Start_DMA(&hadc3, &raw_y, sizeof(uint32_t));
 
-	Calibrate_Joystick(300);
+	if (CALIBRATION) {
+		Calibrate_Joystick(300);
+	} else {
+		neu_x = NEU_X; neu_y = NEU_Y;
+		min_x = MIN_X; min_y = MIN_Y;
+		max_x = MAX_X; max_y = MAX_Y;
+	}
+
 
 	while (1) {
 		HAL_Delay(100);
 		Adjust_Joystick_Readings();
-		printf("\033[1;H%d     ", adj_x);
-		printf("\033[2;H%d     ", adj_y);
-		fflush(stdout);
+		char x_buf[8];
+		char y_buf[8];
+		snprintf(x_buf, 8, "x: %d", adj_x);
+		snprintf(y_buf, 8, "y: %d", adj_y);
+		BSP_LCD_ClearStringLine(0);
+		BSP_LCD_DisplayStringAtLine(0, x_buf);
+		BSP_LCD_ClearStringLine(1);
+		BSP_LCD_DisplayStringAtLine(1, y_buf);
 //		char input = uart_getchar(&USB_UART, 1);
 //		BT_Transmit(&bt, input);
+		adc_flags = 0x00;
 	}
+}
+
+
+void LCD_Init(void)
+{
+  /* LCD Initialization */
+  /* Two layers are used in this application but not simultaneously
+     so "LCD_MAX_PCLK" is recommended to programme the maximum PCLK = 25,16 MHz */
+  BSP_LCD_Init();
+
+  /* LCD Initialization */
+  BSP_LCD_LayerDefaultInit(0, LCD_FB_START_ADDRESS);
+  BSP_LCD_LayerDefaultInit(1, LCD_FB_START_ADDRESS+(BSP_LCD_GetXSize()*BSP_LCD_GetYSize()*4));
+
+  /* Enable the LCD */
+  BSP_LCD_DisplayOn();
+
+  /* Select the LCD Background Layer  */
+  BSP_LCD_SelectLayer(0);
+
+  /* Clear the Background Layer */
+  BSP_LCD_Clear(LCD_COLOR_BLACK);
+
+  /* Select the LCD Foreground Layer  */
+  BSP_LCD_SelectLayer(1);
+
+  /* Clear the Foreground Layer */
+  BSP_LCD_Clear(LCD_COLOR_BLACK);
+
+  /* Configure the transparency for foreground and background :
+     Increase the transparency */
+  BSP_LCD_SetTransparency(0, 0);
+  BSP_LCD_SetTransparency(1, 100);
 }
 
 int8_t _adj_reading(uint32_t raw, uint32_t neu, uint32_t min, uint32_t max) {
@@ -160,9 +221,22 @@ void USART6_IRQHandler( void ) { HAL_UART_IRQHandler(&bt); }
 // ADC
 //------------------------------------------------------------------------------------
 
-void DMA2_Stream0_IRQHandler() { HAL_DMA_IRQHandler(&hdmaadc1); }
+void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
+	printf("hello??\r\n");
+	if (hadc->Instance == ADC1) {
+		printf("Callback Triggered1\r\n");
+		adc_flags |= 1 << 1;
+	} else if (hadc->Instance == ADC3) {
+		printf("Callback Triggered3\r\n");
+		adc_flags |= 1 << 3;
+	} else {
+		printf("Callback Triggered\r\n");
+	}
+}
 
-void DMA2_Stream2_IRQHandler() { HAL_DMA_IRQHandler(&hdmaadc3); }
+void DMA2_Stream4_IRQHandler() { HAL_DMA_IRQHandler(&hdmaadc1); }
+
+void DMA2_Stream1_IRQHandler() { HAL_DMA_IRQHandler(&hdmaadc3); }
 
 void ADC_Init(ADC_HandleTypeDef* hadc, ADC_TypeDef* Tgt, uint32_t Chn, DMA_HandleTypeDef* hdma)
 {
@@ -170,7 +244,7 @@ void ADC_Init(ADC_HandleTypeDef* hadc, ADC_TypeDef* Tgt, uint32_t Chn, DMA_Handl
 	if (Tgt == ADC1) {
 		__ADC1_CLK_ENABLE();
 		__DMA2_CLK_ENABLE();
-		hdma->Instance 			= DMA2_Stream0;
+		hdma->Instance 			= DMA2_Stream4;
 		hdma->Init.Channel 		= DMA_CHANNEL_0;
 	}
 	else if (Tgt == ADC3) {
@@ -200,12 +274,12 @@ void ADC_Init(ADC_HandleTypeDef* hadc, ADC_TypeDef* Tgt, uint32_t Chn, DMA_Handl
 	hadc->Init.ScanConvMode 		= DISABLE;
 	hadc->Init.NbrOfConversion		= 1;
 	hadc->Init.DMAContinuousRequests= ENABLE;
-	hadc->Init.EOCSelection			= ADC_EOC_SEQ_CONV; // ADC_EOC_SEQ_CONV
+	hadc->Init.EOCSelection			= ADC_EOC_SINGLE_CONV;
 	HAL_ADC_Init(hadc);
 
 	ADC_ChannelConfTypeDef ADCConfig;
 	ADCConfig.Channel 		= Chn;
-	ADCConfig.SamplingTime = ADC_SAMPLETIME_144CYCLES;
+	ADCConfig.SamplingTime = ADC_SAMPLETIME_28CYCLES;
 	ADCConfig.Rank 		= ADC_REGULAR_RANK_1;
 	HAL_ADC_ConfigChannel(hadc, &ADCConfig);
 }
