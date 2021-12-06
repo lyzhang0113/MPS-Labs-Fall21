@@ -1,3 +1,9 @@
+/* ERRORS
+ *
+ * 	- Bluetooth uses UART -> REQUIRES COM GND!
+ *
+ */
+
 /*---------- DEFINES ---------------------------------------------------------------*/
 #define BUFFER_SIZE 100
 
@@ -5,35 +11,33 @@
 #include <stdio.h>
 
 #include "init.h"
+#include "bluetooth.h"
 
 /*---------- FUNCTION PROTOTYPES ---------------------------------------------------*/
 void Term_Init		( void );		// Clear and reset Terminal
 void Timer_Init		( void );		// Sets up Timers
-void GPIO_Init		( void );		// Configure and enable GPIO
 void Interrupt_Init	( void );		// Sets up Interrupts
 
-void BT_Configure	( char* instruction );
-
-void uart_read	( UART_HandleTypeDef *huart, uint32_t timeout );
-
-void print_buf	( char *buf, uint32_t size );	// Prints contents of buffer
+void DAC_Init	( DAC_HandleTypeDef *hdac );		// Configure and enable DAC (GPIO, TMR, etc.)
 
 /*---------- HANDLER TYPEDEFS ------------------------------------------------------*/
-UART_HandleTypeDef 	huart6;
+UART_HandleTypeDef 	bt;
 SPI_HandleTypeDef 	hspi1;
+DAC_HandleTypeDef	hdac1;
 
 /*---------- GLOBAL VARIABLE -------------------------------------------------------*/
-char uart_rx[BUFFER_SIZE] = {0};
+
 
 /*---------- MAIN PROGRAM ----------------------------------------------------------*/
 int main(void){
 	Sys_Init();
-	Term_Init();
 	Timer_Init();
-	GPIO_Init();
 	Interrupt_Init();
+	BT_Init(&bt);
+	DAC_Init(&hdac1);
 
-	initUart(&huart6, 9600, USART6);
+	uart_getchar_it(&bt, 0);
+	Term_Init();
 
 	// Read the README in the base directory of this project.
 	while (1)
@@ -49,14 +53,23 @@ void Term_Init(void)
     fflush(stdout); // Need to flush stdout after using printf that doesn't end in \n
 }
 
-void Timer_Init( void )
+void DAC_Init( DAC_HandleTypeDef *hdac )
 {
+	// Enable the DAC Clock.
+	__DAC_CLK_ENABLE();
 
-}
+	hdac->Instance = DAC1;
 
-void GPIO_Init( void )
-{
+	HAL_DAC_Init(hdac); // Initialize the DAC
 
+	// Configure the DAC channel
+	DAC_ChannelConfTypeDef DAC1Config;
+	DAC1Config.DAC_Trigger 		= DAC_TRIGGER_NONE;
+	DAC1Config.DAC_OutputBuffer = DAC_OUTPUTBUFFER_DISABLE;
+
+	HAL_DAC_ConfigChannel(hdac, &DAC1Config, DAC_CHANNEL_1);
+
+	HAL_DAC_Start(hdac, DAC_CHANNEL_1);
 }
 
 void Interrupt_Init( void )
@@ -64,33 +77,45 @@ void Interrupt_Init( void )
 
 }
 
-/*---------- BLUETOOTH FUNCTIONS ---------------------------------------------------*/
-/*
-void BT_Configure(char* instruction)
-{
-	HAL_Delay(1000);
-	printf("Sending Instruction to HC-06 Module: \r\n\t%s\r\n", instruction);
-	uart_print(&huart6, instruction);
-	uart_read(&huart6, 100);
-	printf("Response: \r\n\t");
-	print_buf(uart_rx, BUFFER_SIZE);
-	printf("Complete\r\n\n");
-	fflush(stdout);
-} */
-
 /*---------- UART FUNCTIONS --------------------------------------------------------*/
-void uart_read(UART_HandleTypeDef *huart, uint32_t timeout)
+void USART6_IRQHandler( void ) { HAL_UART_IRQHandler(&bt); }
+
+void HAL_UART_RxCpltCallback( UART_HandleTypeDef *huart )
 {
-	HAL_UART_Receive(huart, (uint8_t *)uart_rx, BUFFER_SIZE, timeout);
+	if (huart->Instance == USART6)
+	{
+		char in = uart_getchar_it(huart, 0);
+		switch (in)
+		{
+		case 'p':
+			printf("Received!\r\n");
+			HAL_UART_Transmit(huart, &in, 1, 100);
+			break;
+		default:
+			HAL_UART_Transmit(huart, 1, 1, 100);
+			printf("%c\r\n", in);
+			break;
+		}
+	}
+}
+
+/*---------- DAC FUNCTIONS ---------------------------------------------------------*/
+void HAL_DAC_MspInit(DAC_HandleTypeDef *hdac)
+{
+
+	GPIO_InitTypeDef  GPIO_InitStruct;
+
+	if (hdac->Instance == DAC1) {
+		__GPIOA_CLK_ENABLE(); // GPIO A4 used for DAC1
+
+		GPIO_InitStruct.Mode 	= GPIO_MODE_ANALOG;	// Analog Mode
+		GPIO_InitStruct.Speed 	= GPIO_SPEED_HIGH;
+		GPIO_InitStruct.Pull 	= GPIO_NOPULL;		// No Push-pull
+		GPIO_InitStruct.Pin 	= GPIO_PIN_4;		// Pin 4
+		HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+	}
+
 }
 
 /*---------- HELPER FUNCTIONS ------------------------------------------------------*/
-void print_buf(char* buf, uint32_t size)
-{
-	for (uint32_t i = 0; i < size; i++) {
-		if (buf[i] == NULL || buf[i] == 0) break;
-		printf("%c", buf[i]);
-		buf[i] = NULL;
-	}
-	fflush(stdout);
-}
+
