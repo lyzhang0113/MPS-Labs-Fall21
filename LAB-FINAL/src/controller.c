@@ -10,7 +10,7 @@
 //------------------------------------------------------------------------------------
 // defines
 //------------------------------------------------------------------------------------
-#define CALIBRATION 0
+#define CALIBRATION 1
 
 #define NEU_X 1179
 #define NEU_Y 1157
@@ -102,34 +102,32 @@ int main(void) {
 		snprintf(jotstick_reading_buf, 60, "             x: %4d          y: %4d     ", adj_x, adj_y);
 		BSP_LCD_DisplayStringAtLine(0, (uint8_t*)jotstick_reading_buf);
 
-		if (abs(adj_x) < 50 && abs(adj_y) < 50) { // STOP
+		if (abs(adj_x) < 60 && abs(adj_y) < 50) { // STOP
 			BSP_LCD_ClearStringLine(2);
-		} else if (adj_x > 50 && adj_y > 50) { // NORTHEAST
+		} else if (adj_x > 60 && adj_y > 50) { // NORTHEAST
 			BSP_LCD_DisplayStringAtLine(2, "          NORTHEAST          ");
 			BT_Transmit(&bt, 'e');
-		} else if (adj_x > 50 && adj_y < -50) { // SOUTHEAST
+		} else if (adj_x > 60 && adj_y < -50) { // SOUTHEAST
 			BSP_LCD_DisplayStringAtLine(2, "          SOUTHEAST          ");
 			BT_Transmit(&bt, 'x');
-		} else if (adj_x < -50 && adj_y < -50) { // SOUTHWEST
+		} else if (adj_x < -60 && adj_y < -50) { // SOUTHWEST
 			BSP_LCD_DisplayStringAtLine(2, "          SOUTHWEST          ");
 			BT_Transmit(&bt, 'z');
-		} else if (adj_x < -50 && adj_y > 50) { // NORTHWEST
+		} else if (adj_x < -60 && adj_y > 50) { // NORTHWEST
 			BSP_LCD_DisplayStringAtLine(2, "          NORTHWEST          ");
 			BT_Transmit(&bt, 'q');
 		} else if (adj_y > 50) { // NORTH
 			BSP_LCD_DisplayStringAtLine(2, "            NORTH            ");
 			BT_Transmit(&bt, 'w');
-		} else if (adj_x > 50) { // EAST
+		} else if (adj_x > 60) { // EAST
 			BSP_LCD_DisplayStringAtLine(2, "            EAST             ");
 			BT_Transmit(&bt, 'd');
 		} else if (adj_y < -50) { // SOUTH
 			BSP_LCD_DisplayStringAtLine(2, "            SOUTH            ");
 			BT_Transmit(&bt, 's');
-		} else if (adj_x < -50) { // WEST
+		} else if (adj_x < -60) { // WEST
 			BSP_LCD_DisplayStringAtLine(2, "            WEST             ");
 			BT_Transmit(&bt, 'a');
-		} else {
-			BSP_LCD_DisplayStringAtLine(2, "            ERROR            ");
 		}
 	}
 }
@@ -155,17 +153,16 @@ void Adjust_Joystick_Readings() {
 }
 
 void Calibrate_Joystick(uint32_t round) {
-
-	printf("Start Joystick Calibration\r\n");
+	BSP_LCD_Clear(LCD_COLOR_WHITE);
+	BSP_LCD_DisplayStringAtLine(0, "Start Joystick Calibration");
 	uint32_t sum_x, sum_y, count;
 
-	printf("Calibrating Neutral Position");
+	BSP_LCD_DisplayStringAtLine(1, "Calibrating Neutral Position");
 	sum_x = sum_y = count = 0;
 	while (1) {
 		if (count >= round) break;
 		if (count % (round/10) == 0) {
-			printf(".");
-			fflush(stdout);
+			BSP_LCD_DisplayChar(COLUMN(count/(round/10)), LINE(2), '.');
 		}
 		sum_x += raw_x;
 		sum_y += raw_y;
@@ -174,17 +171,22 @@ void Calibrate_Joystick(uint32_t round) {
 	}
 	neu_x = sum_x / count;
 	neu_y = sum_y / count;
-	printf("Complete!\r\nneu_x = %ld\tneu_y = %ld\r\n", neu_x, neu_y);
-	printf("** Press Enter to Calibrate MAX Positions **\r\n");
-	getchar();
+	char buf[60];
+	snprintf(buf, 60, "Complete! neu_x = %5ldneu_y = %5ld", neu_x, neu_y);
+	BSP_LCD_DisplayStringAtLine(3, (uint8_t*)buf);
+	BSP_LCD_DisplayStringAtLine(4, "** Move Joystick to Calibrate MAX Positions **");
+	while (abs(raw_x - neu_x) < 80 && abs(raw_y - neu_y) < 80) HAL_Delay(10);
 
-	printf("Calibrating MAX Position");
+	BSP_LCD_ClearStringLine(1);
+	BSP_LCD_ClearStringLine(2);
+	BSP_LCD_ClearStringLine(3);
+	BSP_LCD_ClearStringLine(4);
+	BSP_LCD_DisplayStringAtLine(1, "Calibrating MAX Position");
 	sum_x = sum_y = count = 0;
 	while (1) {
 		if (count >= round) break;
 		if (count % (round/10) == 0) {
-			printf(".");
-			fflush(stdout);
+			BSP_LCD_DisplayChar(COLUMN(count/(round/10)), LINE(2), '.');
 		}
 		sum_x += raw_x;
 		sum_y += raw_y;
@@ -193,17 +195,22 @@ void Calibrate_Joystick(uint32_t round) {
 	}
 	max_x = sum_x / count;
 	max_y = sum_y / count;
-	printf("Complete!\r\nmax_x = %ld\tmax_y = %ld\r\n", max_x, max_y);
-	printf("** Press Enter to Calibrate MIN Positions **\r\n");
-	getchar();
+	snprintf(buf, 60, "Complete! max_x = %5ldmax_y = %5ld", max_x, max_y);
+	BSP_LCD_DisplayStringAtLine(3, (uint8_t*)buf);
+	while (abs(raw_x - neu_x) > 30 || abs(raw_y - neu_y) > 30) HAL_Delay(10);
+	BSP_LCD_DisplayStringAtLine(4, "** Move Joystick to Calibrate MIN Positions **");
+	while (abs(raw_x - neu_x) < 80 && abs(raw_y - neu_y) < 80) HAL_Delay(10);
 
-	printf("Calibrating MIN Position");
+	BSP_LCD_ClearStringLine(1);
+	BSP_LCD_ClearStringLine(2);
+	BSP_LCD_ClearStringLine(3);
+	BSP_LCD_ClearStringLine(4);
+	BSP_LCD_DisplayStringAtLine(1, "Calibrating MIN Position");
 	sum_x = sum_y = count = 0;
 	while (1) {
 		if (count >= round) break;
 		if (count % (round/10) == 0) {
-			printf(".");
-			fflush(stdout);
+			BSP_LCD_DisplayChar(COLUMN(count/(round/10)), LINE(2), '.');
 		}
 		sum_x += raw_x;
 		sum_y += raw_y;
@@ -212,7 +219,12 @@ void Calibrate_Joystick(uint32_t round) {
 	}
 	min_x = sum_x / count;
 	min_y = sum_y / count;
-	printf("Complete!\r\nmin_x = %ld\tmin_y = %ld\r\n", min_x, min_y);
+	snprintf(buf, 60, "Complete! min_x = %5ldmin_y = %5ld", min_x, min_y);
+	BSP_LCD_DisplayStringAtLine(3, (uint8_t*)buf);
+	while (abs(raw_x - neu_x) > 30 || abs(raw_y - neu_y) > 30) HAL_Delay(10);
+	BSP_LCD_DisplayStringAtLine(4, "** Move Joystick to Complete Calibration **");
+	while (abs(raw_x - neu_x) < 80 && abs(raw_y - neu_y) < 80) HAL_Delay(10);
+	BSP_LCD_Clear(LCD_COLOR_WHITE);
 }
 
 //------------------------------------------------------------------------------------
