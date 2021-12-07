@@ -53,7 +53,6 @@ int main(void){
 
 	uart_getchar_it(&bt, 0);
 	Term_Init();
-	enable_mtr();
 
 	// Read the README in the base directory of this project.
 	while (1) {  }
@@ -104,6 +103,7 @@ void HAL_UART_RxCpltCallback( UART_HandleTypeDef *huart )
 
 	if (huart->Instance == USART6)
 	{
+		enable_mtr();
 		char in = uart_getchar_it(huart, 0);
 		switch (in)
 		{
@@ -176,7 +176,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
 	if (htim->Instance == TIM7) {
 		curr_time_in_mili++;
 	}
-	if (curr_time_in_mili >= 200) stop();
+	if (curr_time_in_mili >= SAMPLING_FREQ) stop();
 }
 
 /*==================================================================================*/
@@ -272,6 +272,9 @@ void back_l( void )
 
 void stop( void )
 {
+	HAL_GPIO_WritePin(GPIOJ, GPIO_PIN_1, 0);
+	HAL_GPIO_WritePin(GPIOJ, GPIO_PIN_3, 0);
+
 	HAL_GPIO_WritePin(GPIOF, GPIO_PIN_6, 1);
 	HAL_GPIO_WritePin(GPIOJ, GPIO_PIN_0, 1);
 

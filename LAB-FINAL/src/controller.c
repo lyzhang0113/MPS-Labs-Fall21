@@ -7,6 +7,9 @@
 // ADC1_CHANNEL6 ---> PA6 ---> Arduino A0
 // ADC3_CHANNEL8 ---> PF10 --> Arduino A3
 
+//------------------------------------------------------------------------------------
+// defines
+//------------------------------------------------------------------------------------
 #define CALIBRATION 0
 
 #define NEU_X 1179
@@ -16,31 +19,46 @@
 #define MAX_X 3749
 #define MAX_Y 3878
 
+//------------------------------------------------------------------------------------
+// Includes
+//------------------------------------------------------------------------------------
 #include <stdio.h>
 #include <stdlib.h>
 #include "../Libraries/BSP/STM32F769I-Discovery/stm32f769i_discovery_lcd.h"
 #include "init.h"
 #include "bluetooth.h"
 
+//------------------------------------------------------------------------------------
+// Prototypes
+//------------------------------------------------------------------------------------
+void Term_Init(void);
 void LCD_Init(void);
 void TIM2_Init(TIM_HandleTypeDef* htim, TIM_TypeDef* Tgt);
 void ADC_Init(ADC_HandleTypeDef* hadc, ADC_TypeDef* Tgt, uint32_t Chn, DMA_HandleTypeDef* hdma);
 
+void BT_Connect(UART_HandleTypeDef* hbt);
 void Adjust_Joystick_Readings();
 void Calibrate_Joystick(uint32_t round);
-void Term_Init(void);
 
+//------------------------------------------------------------------------------------
+// HandleTypeDefs
+//------------------------------------------------------------------------------------
 UART_HandleTypeDef bt;
-
 TIM_HandleTypeDef htim2;
 ADC_HandleTypeDef hadc1, hadc3;
 DMA_HandleTypeDef hdmaadc1, hdmaadc3;
 
+//------------------------------------------------------------------------------------
+// Global Variables
+//------------------------------------------------------------------------------------
+uint8_t enabled = 0;
 uint32_t raw_x, raw_y;
 uint32_t neu_x, neu_y, max_x, min_x, max_y, min_y;
 int8_t adj_x, adj_y;
 
-
+//------------------------------------------------------------------------------------
+// MAIN Routine
+//------------------------------------------------------------------------------------
 int main(void) {
 	// Initialization
 	Sys_Init();
@@ -50,27 +68,36 @@ int main(void) {
 	ADC_Init(&hadc3, ADC3, ADC_CHANNEL_8, &hdmaadc3);
 	TIM2_Init(&htim2, TIM2);
 	LCD_Init();
+	BSP_LCD_DisplayStringAtLine(0, "System Initialized");
 
 	// Start Necessary Components
-//	BT_Connect(&bt);
-//	uart_getchar_it(&bt, 0);
 	HAL_TIM_Base_Start(&htim2);
 	HAL_ADC_Start_DMA(&hadc1, &raw_y, sizeof(uint32_t));
 	HAL_ADC_Start_DMA(&hadc3, &raw_x, sizeof(uint32_t));
+	BSP_LCD_DisplayStringAtLine(1, "Start Joystick DMA Reading");
 
 	if (CALIBRATION) {
 		Calibrate_Joystick(300);
 	} else {
-		printf("Joystick Calibration Configuration Found!\r\n");
 		neu_x = NEU_X; neu_y = NEU_Y;
 		min_x = MIN_X; min_y = MIN_Y;
 		max_x = MAX_X; max_y = MAX_Y;
 	}
-
+	BSP_LCD_DisplayStringAtLine(2, "Joystick Calibrated");
+	BSP_LCD_DisplayStringAtLine(6, "     --- Move to Any Direction to Start ---");
 
 	while (1) {
-		HAL_Delay(200);
+		HAL_Delay(SAMPLING_FREQ);
 		Adjust_Joystick_Readings();
+
+		if (!enabled) {
+			if (abs(adj_x) > 50 || abs(adj_y) > 50) {
+				enabled = 1;
+				BSP_LCD_Clear(LCD_COLOR_WHITE);
+			}
+			continue;
+		}
+
 		char jotstick_reading_buf[60];
 		snprintf(jotstick_reading_buf, 60, "             x: %4d          y: %4d     ", adj_x, adj_y);
 		BSP_LCD_DisplayStringAtLine(0, (uint8_t*)jotstick_reading_buf);
@@ -107,41 +134,9 @@ int main(void) {
 	}
 }
 
-
-void LCD_Init(void)
-{
-  /* LCD Initialization */
-  /* Two layers are used in this application but not simultaneously
-     so "LCD_MAX_PCLK" is recommended to programme the maximum PCLK = 25,16 MHz */
-  BSP_LCD_Init();
-
-  /* LCD Initialization */
-  BSP_LCD_LayerDefaultInit(0, LCD_FB_START_ADDRESS);
-  BSP_LCD_LayerDefaultInit(1, LCD_FB_START_ADDRESS+(BSP_LCD_GetXSize()*BSP_LCD_GetYSize()*4));
-
-  /* Enable the LCD */
-  BSP_LCD_DisplayOn();
-
-  /* Select the LCD Background Layer  */
-  BSP_LCD_SelectLayer(0);
-
-  /* Clear the Background Layer */
-  BSP_LCD_Clear(LCD_COLOR_WHITE);
-
-  /* Select the LCD Foreground Layer  */
-  BSP_LCD_SelectLayer(1);
-
-  /* Clear the Foreground Layer */
-  BSP_LCD_Clear(LCD_COLOR_WHITE);
-
-  /* Configure the transparency for foreground and background :
-     Increase the transparency */
-  BSP_LCD_SetTransparency(0, 0);
-  BSP_LCD_SetTransparency(1, 100);
-
-  printf("Setting Font\r\n");
-  BSP_LCD_SetFont(&Font32);
-}
+//------------------------------------------------------------------------------------
+// Joystick
+//------------------------------------------------------------------------------------
 
 int8_t _adj_reading(uint32_t raw, uint32_t neu, uint32_t min, uint32_t max) {
 	int32_t tmp = raw - neu;
@@ -220,16 +215,43 @@ void Calibrate_Joystick(uint32_t round) {
 	printf("Complete!\r\nmin_x = %ld\tmin_y = %ld\r\n", min_x, min_y);
 }
 
-void HAL_UART_RxCpltCallback( UART_HandleTypeDef *huart )
+//------------------------------------------------------------------------------------
+// LCD and Terminal Init
+//------------------------------------------------------------------------------------
+
+void LCD_Init(void)
 {
-	if (huart->Instance == USART6)
-	{
-		char in = uart_getchar_it(&bt, 0);
-		switch (in) {
-		default:
-			break;
-		}
-	}
+  /* LCD Initialization */
+  /* Two layers are used in this application but not simultaneously
+     so "LCD_MAX_PCLK" is recommended to programme the maximum PCLK = 25,16 MHz */
+  BSP_LCD_Init();
+
+  /* LCD Initialization */
+  BSP_LCD_LayerDefaultInit(0, LCD_FB_START_ADDRESS);
+  BSP_LCD_LayerDefaultInit(1, LCD_FB_START_ADDRESS+(BSP_LCD_GetXSize()*BSP_LCD_GetYSize()*4));
+
+  /* Enable the LCD */
+  BSP_LCD_DisplayOn();
+
+  /* Select the LCD Background Layer  */
+  BSP_LCD_SelectLayer(0);
+
+  /* Clear the Background Layer */
+  BSP_LCD_Clear(LCD_COLOR_WHITE);
+
+  /* Select the LCD Foreground Layer  */
+  BSP_LCD_SelectLayer(1);
+
+  /* Clear the Foreground Layer */
+  BSP_LCD_Clear(LCD_COLOR_WHITE);
+
+  /* Configure the transparency for foreground and background :
+     Increase the transparency */
+  BSP_LCD_SetTransparency(0, 0);
+  BSP_LCD_SetTransparency(1, 100);
+
+  printf("Setting Font\r\n");
+  BSP_LCD_SetFont(&Font32);
 }
 
 void Term_Init(void)
@@ -238,12 +260,24 @@ void Term_Init(void)
     fflush(stdout); // Need to flush stdout after using printf that doesn't end in \n
 }
 
-
+//------------------------------------------------------------------------------------
+// UART6 Bluetooth
+//------------------------------------------------------------------------------------
 
 void USART6_IRQHandler( void ) { HAL_UART_IRQHandler(&bt); }
 
-void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
-	;
+void HAL_UART_RxCpltCallback( UART_HandleTypeDef *huart )
+{
+	if (huart->Instance == USART6)
+	{
+		char in = uart_getchar_it(huart, 0);
+		switch (in) {
+		case 'p':
+			break;
+		default:
+			break;
+		}
+	}
 }
 
 //------------------------------------------------------------------------------------

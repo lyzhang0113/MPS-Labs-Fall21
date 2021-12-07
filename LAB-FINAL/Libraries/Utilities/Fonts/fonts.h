@@ -87,7 +87,7 @@ extern sFONT Font8;
   * @{
   */ 
 #define LINE(x) ((x) * (((sFONT *)BSP_LCD_GetFont())->Height))
-
+#define COLUMN(x) ((x) * (((sFONT *)BSP_LCD_GetFont())->Width))
 /**
   * @}
   */ 

@@ -8,11 +8,11 @@
 #ifndef INC_BLUETOOTH_H_
 #define INC_BLUETOOTH_H_
 
+#define SAMPLING_FREQ 50
+
 #include "uart.h"
 
 void BT_Init(UART_HandleTypeDef* hbt);
-
-void BT_Connect(UART_HandleTypeDef* hbt); // Only Master Triggers this
 
 void BT_Transmit(UART_HandleTypeDef* hbt, char c);
 
