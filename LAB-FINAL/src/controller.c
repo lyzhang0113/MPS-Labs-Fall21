@@ -36,7 +36,6 @@ TIM_HandleTypeDef htim2;
 ADC_HandleTypeDef hadc1, hadc3;
 DMA_HandleTypeDef hdmaadc1, hdmaadc3;
 
-uint8_t adc_flags;
 uint32_t raw_x, raw_y;
 uint32_t neu_x, neu_y, max_x, min_x, max_y, min_y;
 int8_t adj_x, adj_y;
@@ -56,12 +55,13 @@ int main(void) {
 //	BT_Connect(&bt);
 //	uart_getchar_it(&bt, 0);
 	HAL_TIM_Base_Start(&htim2);
-	HAL_ADC_Start_DMA(&hadc1, &raw_x, sizeof(uint32_t));
-	HAL_ADC_Start_DMA(&hadc3, &raw_y, sizeof(uint32_t));
+	HAL_ADC_Start_DMA(&hadc1, &raw_y, sizeof(uint32_t));
+	HAL_ADC_Start_DMA(&hadc3, &raw_x, sizeof(uint32_t));
 
 	if (CALIBRATION) {
 		Calibrate_Joystick(300);
 	} else {
+		printf("Joystick Calibration Configuration Found!\r\n");
 		neu_x = NEU_X; neu_y = NEU_Y;
 		min_x = MIN_X; min_y = MIN_Y;
 		max_x = MAX_X; max_y = MAX_Y;
@@ -69,19 +69,41 @@ int main(void) {
 
 
 	while (1) {
-		HAL_Delay(100);
+		HAL_Delay(200);
 		Adjust_Joystick_Readings();
-		char x_buf[8];
-		char y_buf[8];
-		snprintf(x_buf, 8, "x: %d", adj_x);
-		snprintf(y_buf, 8, "y: %d", adj_y);
-		BSP_LCD_ClearStringLine(0);
-		BSP_LCD_DisplayStringAtLine(0, x_buf);
-		BSP_LCD_ClearStringLine(1);
-		BSP_LCD_DisplayStringAtLine(1, y_buf);
-//		char input = uart_getchar(&USB_UART, 1);
-//		BT_Transmit(&bt, input);
-		adc_flags = 0x00;
+		char jotstick_reading_buf[60];
+		snprintf(jotstick_reading_buf, 60, "             x: %4d          y: %4d     ", adj_x, adj_y);
+		BSP_LCD_DisplayStringAtLine(0, (uint8_t*)jotstick_reading_buf);
+
+		if (abs(adj_x) < 50 && abs(adj_y) < 50) { // STOP
+			BSP_LCD_ClearStringLine(2);
+		} else if (adj_x > 50 && adj_y > 50) { // NORTHEAST
+			BSP_LCD_DisplayStringAtLine(2, "          NORTHEAST          ");
+			BT_Transmit(&bt, 'e');
+		} else if (adj_x > 50 && adj_y < -50) { // SOUTHEAST
+			BSP_LCD_DisplayStringAtLine(2, "          SOUTHEAST          ");
+			BT_Transmit(&bt, 'x');
+		} else if (adj_x < -50 && adj_y < -50) { // SOUTHWEST
+			BSP_LCD_DisplayStringAtLine(2, "          SOUTHWEST          ");
+			BT_Transmit(&bt, 'z');
+		} else if (adj_x < -50 && adj_y > 50) { // NORTHWEST
+			BSP_LCD_DisplayStringAtLine(2, "          NORTHWEST          ");
+			BT_Transmit(&bt, 'q');
+		} else if (adj_y > 50) { // NORTH
+			BSP_LCD_DisplayStringAtLine(2, "            NORTH            ");
+			BT_Transmit(&bt, 'w');
+		} else if (adj_x > 50) { // EAST
+			BSP_LCD_DisplayStringAtLine(2, "            EAST             ");
+			BT_Transmit(&bt, 'd');
+		} else if (adj_y < -50) { // SOUTH
+			BSP_LCD_DisplayStringAtLine(2, "            SOUTH            ");
+			BT_Transmit(&bt, 's');
+		} else if (adj_x < -50) { // WEST
+			BSP_LCD_DisplayStringAtLine(2, "            WEST             ");
+			BT_Transmit(&bt, 'a');
+		} else {
+			BSP_LCD_DisplayStringAtLine(2, "            ERROR            ");
+		}
 	}
 }
 
@@ -104,18 +126,21 @@ void LCD_Init(void)
   BSP_LCD_SelectLayer(0);
 
   /* Clear the Background Layer */
-  BSP_LCD_Clear(LCD_COLOR_BLACK);
+  BSP_LCD_Clear(LCD_COLOR_WHITE);
 
   /* Select the LCD Foreground Layer  */
   BSP_LCD_SelectLayer(1);
 
   /* Clear the Foreground Layer */
-  BSP_LCD_Clear(LCD_COLOR_BLACK);
+  BSP_LCD_Clear(LCD_COLOR_WHITE);
 
   /* Configure the transparency for foreground and background :
      Increase the transparency */
   BSP_LCD_SetTransparency(0, 0);
   BSP_LCD_SetTransparency(1, 100);
+
+  printf("Setting Font\r\n");
+  BSP_LCD_SetFont(&Font32);
 }
 
 int8_t _adj_reading(uint32_t raw, uint32_t neu, uint32_t min, uint32_t max) {
@@ -130,8 +155,8 @@ int8_t _adj_reading(uint32_t raw, uint32_t neu, uint32_t min, uint32_t max) {
 }
 
 void Adjust_Joystick_Readings() {
-	adj_x = -1 * _adj_reading(raw_x, neu_x, min_x, max_x);
-	adj_y = _adj_reading(raw_y, neu_y, min_y, max_y);
+	adj_x = _adj_reading(raw_x, neu_x, min_x, max_x);
+	adj_y = -1 * _adj_reading(raw_y, neu_y, min_y, max_y);
 }
 
 void Calibrate_Joystick(uint32_t round) {
@@ -217,22 +242,13 @@ void Term_Init(void)
 
 void USART6_IRQHandler( void ) { HAL_UART_IRQHandler(&bt); }
 
+void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
+	;
+}
+
 //------------------------------------------------------------------------------------
 // ADC
 //------------------------------------------------------------------------------------
-
-void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
-	printf("hello??\r\n");
-	if (hadc->Instance == ADC1) {
-		printf("Callback Triggered1\r\n");
-		adc_flags |= 1 << 1;
-	} else if (hadc->Instance == ADC3) {
-		printf("Callback Triggered3\r\n");
-		adc_flags |= 1 << 3;
-	} else {
-		printf("Callback Triggered\r\n");
-	}
-}
 
 void DMA2_Stream4_IRQHandler() { HAL_DMA_IRQHandler(&hdmaadc1); }
 
