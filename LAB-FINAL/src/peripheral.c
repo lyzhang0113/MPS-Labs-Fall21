@@ -3,12 +3,16 @@
  * 	- Bluetooth uses UART -> REQUIRES COM GND!
  *
 *	GPIO
-*		ENA = PJ1	[D2]
-*		IN1 = PF6	[D3]
+*		ENA = PF6	[D3]
+*		IN1 = PJ1	[D2]
 *		IN2 = PJ0	.
 *		IN3 = PC8	.
-*		IN4 = PF7	.
-*		ENB = PJ3	[D7]
+*		IN4 = PJ3	[D7]
+*		ENB = PF7	[D6]
+ *
+ *	BYTE STRUCTURE:
+ * [ Parity check [1] | Speed [4] | Direction [3] ]
+ *
  *
  */
 
@@ -26,7 +30,7 @@ void Term_Init		( void );		// Clear and reset Terminal
 void GPIO_Init		( void );		// Sets up GPIO
 void Timer_Init		( void );
 
-void enable_mtr ( void );
+void enable_mtr ( char speed );
 void forward	( void );	// MOVEMENT FUNCTIONS FOR MOTOR
 void backward 	( void );
 void turn_right ( void );
@@ -39,7 +43,8 @@ void stop		( void );
 
 /*---------- HANDLER TYPEDEFS ------------------------------------------------------*/
 UART_HandleTypeDef 	bt;
-TIM_HandleTypeDef 	htim7;
+TIM_HandleTypeDef 	htim7, htim10, htim11;
+TIM_OC_InitTypeDef	htim10_ch1, htim11_ch1;
 
 /*---------- GLOBAL VARIABLE -------------------------------------------------------*/
 uint32_t curr_time_in_mili = 0;
@@ -67,7 +72,7 @@ void Term_Init(void)
 
 void GPIO_Init( void )
 {
-	GPIO_InitTypeDef initJ, initF, initC;
+	GPIO_InitTypeDef initJ, initF1, initF2, initC;
 
 	__HAL_RCC_SYSCFG_CLK_ENABLE();
 
@@ -78,10 +83,17 @@ void GPIO_Init( void )
 	initJ.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
 
 	__HAL_RCC_GPIOF_CLK_ENABLE();
-	initF.Pin	= GPIO_PIN_6 | GPIO_PIN_7;
-	initF.Mode	= GPIO_MODE_OUTPUT_PP;
-	initF.Pull	= GPIO_PULLUP;
-	initF.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+	initF1.Pin	= GPIO_PIN_6;
+	initF1.Mode	= GPIO_MODE_AF_PP;
+	initF1.Pull	= GPIO_NOPULL;
+	initF1.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+	initF1.Alternate = GPIO_AF3_TIM10;
+
+	initF2.Pin	= GPIO_PIN_7;
+	initF2.Mode	= GPIO_MODE_AF_PP;
+	initF2.Pull	= GPIO_NOPULL;
+	initF2.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+	initF2.Alternate = GPIO_AF3_TIM11;
 
 	__HAL_RCC_GPIOC_CLK_ENABLE();
 	initC.Pin	= GPIO_PIN_8;
@@ -90,56 +102,70 @@ void GPIO_Init( void )
 	initC.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
 
 	HAL_GPIO_Init(GPIOJ, &initJ);
-	HAL_GPIO_Init(GPIOF, &initF);
+	HAL_GPIO_Init(GPIOF, &initF1);
+	HAL_GPIO_Init(GPIOF, &initF2);
 	HAL_GPIO_Init(GPIOC, &initC);
 }
 
 /*---------- UART FUNCTIONS --------------------------------------------------------*/
 void USART6_IRQHandler( void ) { HAL_UART_IRQHandler(&bt); }
 
+
+/*
+*	BYTE STRUCTURE:
+* [ Parity check [1] | Speed [4] | Direction [3] ]
+*
+*
+*/
 void HAL_UART_RxCpltCallback( UART_HandleTypeDef *huart )
 {
+	char in, dir, spd;
+
 	curr_time_in_mili = 0;
 
 	if (huart->Instance == USART6)
 	{
-		enable_mtr();
-		char in = uart_getchar_it(huart, 0);
-		switch (in)
+		in = uart_getchar_it(huart, 0);
+
+		if (!parity_check(in)) return;
+		else {
+			dir = (in & 0b00000111);
+			spd = (in >> 3) & 0b00001111;
+		}
+
+		enable_mtr(spd);
+
+		switch (dir)
 		{
-		case 'p':
-			printf("received ping!\r\n");
-			BT_Transmit(&bt, 'p');
-			break;
-		case 'w':
+		case 0b000:
 			printf("w\r\n");
 			forward();
 			break;
-		case 'e':
+		case 0b001:
 			printf("e\r\n");
 			front_r();
 			break;
-		case 'd':
+		case 0b010:
 			printf("d\r\n");
 			turn_right();
 			break;
-		case 'x':
+		case 0b011:
 			printf("x\r\n");
 			back_r();
 			break;
-		case 's':
+		case 0b100:
 			printf("s\r\n");
 			backward();
 			break;
-		case 'z':
+		case 0b101:
 			printf("z\r\n");
 			back_l();
 			break;
-		case 'a':
+		case 0b110:
 			printf("a\r\n");
 			turn_left();
 			break;
-		case 'q':
+		case 0b111:
 			printf("q\r\n");
 			front_l();
 			break;
@@ -156,9 +182,46 @@ void Timer_Init()
 	htim7.Init.CounterMode = TIM_COUNTERMODE_UP;
 	htim7.Init.Period = 100; // 100kHz / 100 = 1kHz -> every 1ms
 	htim7.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-
 	HAL_TIM_Base_Init(&htim7);
+
+	htim10.Instance = TIM10;
+	htim10.Init.Prescaler = (uint32_t) 10800;
+	htim10.Init.CounterMode = TIM_COUNTERMODE_UP;
+	htim10.Init.Period = 20000;
+	htim10.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+	HAL_TIM_PWM_Init(&htim10);
+
+	htim10_ch1.OCMode = TIM_OCMODE_PWM1;
+	htim10_ch1.Pulse = 10000;
+	htim10_ch1.OCPolarity = TIM_OCPOLARITY_HIGH;
+	htim10_ch1.OCFastMode = TIM_OCFAST_DISABLE;
+	HAL_TIM_PWM_ConfigChannel(&htim10, &htim10_ch1, TIM_CHANNEL_1);
+
+
+	htim11.Instance = TIM11;
+	htim11.Init.Prescaler = (uint32_t) 10800;
+	htim11.Init.CounterMode = TIM_COUNTERMODE_UP;
+	htim11.Init.Period = 20000;
+	htim11.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+	HAL_TIM_PWM_Init(&htim10);
+
+	htim11_ch1.OCMode = TIM_OCMODE_PWM1;
+	htim11_ch1.Pulse = 10000;
+	htim11_ch1.OCPolarity = TIM_OCPOLARITY_HIGH;
+	htim11_ch1.OCFastMode = TIM_OCFAST_DISABLE;
+	HAL_TIM_PWM_ConfigChannel(&htim11, &htim11_ch1, TIM_CHANNEL_1);
+
 	HAL_TIM_Base_Start_IT(&htim7);
+	HAL_TIM_PWM_Start(&htim10_ch1, TIM_CHANNEL_1);
+	HAL_TIM_PWM_Start(&htim11_ch1, TIM_CHANNEL_1);
+}
+
+void HAL_TIM_PWM_MspInit( TIM_HandleTypeDef *htim )
+{
+	__HAL_RCC_TIM10_CLK_ENABLE();
+	__HAL_RCC_TIM11_CLK_ENABLE();
+
+
 }
 
 void HAL_TIM_Base_MspInit(TIM_HandleTypeDef* htim)
@@ -181,18 +244,17 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
 
 /*==================================================================================*/
 /*
-*	GPIO
-*		ENA = PJ1	[D2]
-*		IN1 = PF6	[D3]
+ *	GPIO
+*		ENA = PF6	[D3]
+*		IN1 = PJ1	[D2]
 *		IN2 = PJ0	.
 *		IN3 = PC8	.
-*		IN4 = PF7	.
-*		ENB = PJ3	[D7]
-*
+*		IN4 = PJ3	[D7]
+*		ENB = PF7	[D6]
 */
 
 /*---------- MOTOR FUNCTIONS ------------------------------------------------------*/
-void enable_mtr( void )
+void enable_mtr( char speed )
 {
 	HAL_GPIO_WritePin(GPIOJ, GPIO_PIN_1, 1);
 	HAL_GPIO_WritePin(GPIOJ, GPIO_PIN_3, 1);
