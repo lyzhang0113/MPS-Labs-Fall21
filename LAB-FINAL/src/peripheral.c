@@ -18,6 +18,7 @@
 
 /*---------- DEFINES ---------------------------------------------------------------*/
 #define BUFFER_SIZE 100
+#define K_PWM		650
 
 /*---------- INCLUDES --------------------------------------------------------------*/
 #include <stdio.h>
@@ -30,7 +31,7 @@ void Term_Init		( void );		// Clear and reset Terminal
 void GPIO_Init		( void );		// Sets up GPIO
 void Timer_Init		( void );
 
-void enable_mtr ( char speed );
+
 void forward	( void );	// MOVEMENT FUNCTIONS FOR MOTOR
 void backward 	( void );
 void turn_right ( void );
@@ -40,6 +41,8 @@ void front_l	( void );
 void back_r		( void );
 void back_l		( void );
 void stop		( void );
+
+void Set_PWM	( char speed );
 
 /*---------- HANDLER TYPEDEFS ------------------------------------------------------*/
 UART_HandleTypeDef 	bt;
@@ -130,10 +133,10 @@ void HAL_UART_RxCpltCallback( UART_HandleTypeDef *huart )
 		if (!parity_check(in)) return;
 		else {
 			dir = (in & 0b00000111);
-			spd = (in >> 3) & 0b00001111;
+			spd = ((in >> 3) & 0b00001111) * K_PWM;
 		}
 
-		enable_mtr(spd);
+		Set_PWM(spd);
 
 		switch (dir)
 		{
@@ -185,42 +188,41 @@ void Timer_Init()
 	HAL_TIM_Base_Init(&htim7);
 
 	htim10.Instance = TIM10;
-	htim10.Init.Prescaler = (uint32_t) 10800;
+	htim10.Init.Prescaler = (uint32_t) 108;
 	htim10.Init.CounterMode = TIM_COUNTERMODE_UP;
-	htim10.Init.Period = 20000;
+	htim10.Init.Period = 10000;
 	htim10.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
 	HAL_TIM_PWM_Init(&htim10);
 
 	htim10_ch1.OCMode = TIM_OCMODE_PWM1;
-	htim10_ch1.Pulse = 10000;
+	htim10_ch1.Pulse = 0;
 	htim10_ch1.OCPolarity = TIM_OCPOLARITY_HIGH;
 	htim10_ch1.OCFastMode = TIM_OCFAST_DISABLE;
 	HAL_TIM_PWM_ConfigChannel(&htim10, &htim10_ch1, TIM_CHANNEL_1);
 
 
 	htim11.Instance = TIM11;
-	htim11.Init.Prescaler = (uint32_t) 10800;
+	htim11.Init.Prescaler = (uint32_t) 108;
 	htim11.Init.CounterMode = TIM_COUNTERMODE_UP;
-	htim11.Init.Period = 20000;
+	htim11.Init.Period = 10000;
 	htim11.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
 	HAL_TIM_PWM_Init(&htim10);
 
 	htim11_ch1.OCMode = TIM_OCMODE_PWM1;
-	htim11_ch1.Pulse = 10000;
+	htim11_ch1.Pulse = 0;
 	htim11_ch1.OCPolarity = TIM_OCPOLARITY_HIGH;
 	htim11_ch1.OCFastMode = TIM_OCFAST_DISABLE;
 	HAL_TIM_PWM_ConfigChannel(&htim11, &htim11_ch1, TIM_CHANNEL_1);
 
 	HAL_TIM_Base_Start_IT(&htim7);
-	HAL_TIM_PWM_Start(&htim10_ch1, TIM_CHANNEL_1);
-	HAL_TIM_PWM_Start(&htim11_ch1, TIM_CHANNEL_1);
+	HAL_TIM_PWM_Start(&htim10, TIM_CHANNEL_1);
+	HAL_TIM_PWM_Start(&htim11, TIM_CHANNEL_1);
 }
 
 void HAL_TIM_PWM_MspInit( TIM_HandleTypeDef *htim )
 {
 	__HAL_RCC_TIM10_CLK_ENABLE();
 	__HAL_RCC_TIM11_CLK_ENABLE();
-
 
 }
 
@@ -254,11 +256,6 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
 */
 
 /*---------- MOTOR FUNCTIONS ------------------------------------------------------*/
-void enable_mtr( char speed )
-{
-	HAL_GPIO_WritePin(GPIOJ, GPIO_PIN_1, 1);
-	HAL_GPIO_WritePin(GPIOJ, GPIO_PIN_3, 1);
-}
 
 void forward( void )
 {
@@ -334,12 +331,20 @@ void back_l( void )
 
 void stop( void )
 {
-	HAL_GPIO_WritePin(GPIOJ, GPIO_PIN_1, 0);
-	HAL_GPIO_WritePin(GPIOJ, GPIO_PIN_3, 0);
+//	HAL_GPIO_WritePin(GPIOJ, GPIO_PIN_1, 0);
+//	HAL_GPIO_WritePin(GPIOJ, GPIO_PIN_3, 0);
 
-	HAL_GPIO_WritePin(GPIOF, GPIO_PIN_6, 1);
-	HAL_GPIO_WritePin(GPIOJ, GPIO_PIN_0, 1);
+//	HAL_GPIO_WritePin(GPIOF, GPIO_PIN_6, 1);
+//	HAL_GPIO_WritePin(GPIOJ, GPIO_PIN_0, 1);
+//
+//	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_8, 1);
+//	HAL_GPIO_WritePin(GPIOF, GPIO_PIN_7, 1);
 
-	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_8, 1);
-	HAL_GPIO_WritePin(GPIOF, GPIO_PIN_7, 1);
+	Set_PWM((char)0);
+}
+
+void Set_PWM(char speed)
+{
+	TIM10->CCR1 = (uint32_t)speed;
+	TIM11->CCR1 = (uint32_t)speed;
 }
