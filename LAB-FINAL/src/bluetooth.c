@@ -19,3 +19,21 @@ void BT_Init(UART_HandleTypeDef* hbt) {
 void BT_Transmit(UART_HandleTypeDef* hbt, char c) {
 	HAL_UART_Transmit(hbt, &c, 1, 100);
 }
+
+uint8_t get_parity(uint8_t val) {
+	uint8_t parity = 0x00;
+	while (val) {
+		parity = !parity;
+		val = val & (val - 1);
+	}
+	return parity;
+}
+
+uint8_t add_parity(uint8_t val) {
+	val = (val << 1) >> 1;
+	return val | get_parity(val) << 7;
+}
+
+uint8_t parity_check(uint8_t val) {
+	return val >> 7 == get_parity(val);
+}
