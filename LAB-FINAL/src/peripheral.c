@@ -18,7 +18,16 @@
 
 /*---------- DEFINES ---------------------------------------------------------------*/
 #define BUFFER_SIZE 100
-#define K_PWM		650
+#define K_PWM		(uint16_t) 650
+
+#define RIGHT_MTR_FWD {HAL_GPIO_WritePin(GPIOJ, GPIO_PIN_1, 1);\
+	HAL_GPIO_WritePin(GPIOJ,GPIO_PIN_0, 0);}
+#define RIGHT_MTR_BKD {HAL_GPIO_WritePin(GPIOJ, GPIO_PIN_1, 0);\
+	HAL_GPIO_WritePin(GPIOJ,GPIO_PIN_0, 1);}
+#define LEFT_MTR_FWD {HAL_GPIO_WritePin(GPIOC, GPIO_PIN_8, 1);\
+	HAL_GPIO_WritePin(GPIOJ,GPIO_PIN_3, 0);}
+#define LEFT_MTR_BKD {HAL_GPIO_WritePin(GPIOC, GPIO_PIN_8, 0);\
+	HAL_GPIO_WritePin(GPIOJ,GPIO_PIN_3, 1);}
 
 /*---------- INCLUDES --------------------------------------------------------------*/
 #include <stdio.h>
@@ -130,11 +139,11 @@ void HAL_UART_RxCpltCallback( UART_HandleTypeDef *huart )
 	{
 		in = uart_getchar_it(huart, 0);
 
-		if (!parity_check(in)) return;
-		else {
-			dir = (in & 0b00000111);
-			spd = ((in >> 3) & 0b00001111) * K_PWM;
-		}
+		//if (!parity_check(in)) { printf("FAIL PARITY\r\n"); return; }
+		//else {
+		dir = (in & 0b00000111);
+		spd = ((in >> 3) & 0b00001111);
+		//}
 
 		Set_PWM(spd);
 
@@ -206,7 +215,7 @@ void Timer_Init()
 	htim11.Init.CounterMode = TIM_COUNTERMODE_UP;
 	htim11.Init.Period = 10000;
 	htim11.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-	HAL_TIM_PWM_Init(&htim10);
+	HAL_TIM_PWM_Init(&htim11);
 
 	htim11_ch1.OCMode = TIM_OCMODE_PWM1;
 	htim11_ch1.Pulse = 0;
@@ -259,92 +268,74 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
 
 void forward( void )
 {
-	HAL_GPIO_WritePin(GPIOF, GPIO_PIN_6, 1);
-	HAL_GPIO_WritePin(GPIOJ, GPIO_PIN_0, 0);
-
-	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_8, 1);
-	HAL_GPIO_WritePin(GPIOF, GPIO_PIN_7, 0);
+	RIGHT_MTR_FWD;
+	LEFT_MTR_FWD;
 }
 
 void backward( void )
 {
-	HAL_GPIO_WritePin(GPIOF, GPIO_PIN_6, 0);
-	HAL_GPIO_WritePin(GPIOJ, GPIO_PIN_0, 1);
-
-	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_8, 0);
-	HAL_GPIO_WritePin(GPIOF, GPIO_PIN_7, 1);
+	RIGHT_MTR_BKD;
+	LEFT_MTR_BKD;
 }
 
 void turn_right( void )
 {
-	HAL_GPIO_WritePin(GPIOF, GPIO_PIN_6, 0);
-	HAL_GPIO_WritePin(GPIOJ, GPIO_PIN_0, 1);
-
-	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_8, 1);
-	HAL_GPIO_WritePin(GPIOF, GPIO_PIN_7, 0);
+	RIGHT_MTR_BKD;
+	LEFT_MTR_FWD;
 }
 
 void turn_left( void )
 {
-	HAL_GPIO_WritePin(GPIOF, GPIO_PIN_6, 1);
-	HAL_GPIO_WritePin(GPIOJ, GPIO_PIN_0, 0);
-
-	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_8, 0);
-	HAL_GPIO_WritePin(GPIOF, GPIO_PIN_7, 1);
+	RIGHT_MTR_FWD;
+	LEFT_MTR_BKD;
 }
 
 void front_r( void )
 {
-	HAL_GPIO_WritePin(GPIOF, GPIO_PIN_6, 1);
-	HAL_GPIO_WritePin(GPIOJ, GPIO_PIN_0, 1);
-
-	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_8, 1);
-	HAL_GPIO_WritePin(GPIOF, GPIO_PIN_7, 0);
+	stop();
+	LEFT_MTR_FWD;
 }
 
 void front_l( void )
 {
-	HAL_GPIO_WritePin(GPIOF, GPIO_PIN_6, 1);
-	HAL_GPIO_WritePin(GPIOJ, GPIO_PIN_0, 0);
-
-	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_8, 1);
-	HAL_GPIO_WritePin(GPIOF, GPIO_PIN_7, 1);
+	stop();
+	RIGHT_MTR_FWD;
 }
 
 void back_r( void )
 {
-	HAL_GPIO_WritePin(GPIOF, GPIO_PIN_6, 1);
-	HAL_GPIO_WritePin(GPIOJ, GPIO_PIN_0, 1);
-
-	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_8, 0);
-	HAL_GPIO_WritePin(GPIOF, GPIO_PIN_7, 1);
+	stop();
+	LEFT_MTR_BKD;
 }
 
 void back_l( void )
 {
-	HAL_GPIO_WritePin(GPIOF, GPIO_PIN_6, 0);
-	HAL_GPIO_WritePin(GPIOJ, GPIO_PIN_0, 1);
-
-	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_8, 1);
-	HAL_GPIO_WritePin(GPIOF, GPIO_PIN_7, 1);
+	stop();
+	RIGHT_MTR_BKD;
 }
 
 void stop( void )
 {
-//	HAL_GPIO_WritePin(GPIOJ, GPIO_PIN_1, 0);
-//	HAL_GPIO_WritePin(GPIOJ, GPIO_PIN_3, 0);
 
-//	HAL_GPIO_WritePin(GPIOF, GPIO_PIN_6, 1);
-//	HAL_GPIO_WritePin(GPIOJ, GPIO_PIN_0, 1);
-//
-//	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_8, 1);
-//	HAL_GPIO_WritePin(GPIOF, GPIO_PIN_7, 1);
+	HAL_GPIO_WritePin(GPIOJ, GPIO_PIN_1, 0);
+	HAL_GPIO_WritePin(GPIOJ, GPIO_PIN_0, 0);
 
-	Set_PWM((char)0);
+	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_8, 0);
+	HAL_GPIO_WritePin(GPIOJ, GPIO_PIN_3, 0);
+
+	//Set_PWM((char)0);
 }
 
 void Set_PWM(char speed)
 {
-	TIM10->CCR1 = (uint32_t)speed;
-	TIM11->CCR1 = (uint32_t)speed;
+	/*
+	TIM10->CCR1 = (uint32_t)speed*K_PWM;
+	TIM11->CCR1 = (uint32_t)speed*K_PWM;
+	*/
+	htim10_ch1.Pulse = (uint16_t)speed*K_PWM;
+	htim11_ch1.Pulse = (uint16_t)speed*K_PWM + (speed*10);
+	HAL_TIM_PWM_ConfigChannel(&htim10, &htim10_ch1, TIM_CHANNEL_1);
+	HAL_TIM_PWM_ConfigChannel(&htim11, &htim11_ch1, TIM_CHANNEL_1);
+	HAL_TIM_PWM_Start(&htim10, TIM_CHANNEL_1);
+	HAL_TIM_PWM_Start(&htim11, TIM_CHANNEL_1);
 }
