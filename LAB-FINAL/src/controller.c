@@ -37,6 +37,7 @@ void TIM2_Init(TIM_HandleTypeDef* htim, TIM_TypeDef* Tgt);
 void ADC_Init(ADC_HandleTypeDef* hadc, ADC_TypeDef* Tgt, uint32_t Chn, DMA_HandleTypeDef* hdma);
 
 void BT_Connect(UART_HandleTypeDef* hbt);
+uint8_t construct_byte(uint8_t speed, uint8_t dir);
 void Adjust_Joystick_Readings();
 void Calibrate_Joystick(uint32_t round);
 
@@ -102,39 +103,52 @@ int main(void) {
 		snprintf(jotstick_reading_buf, 60, "             x: %4d          y: %4d     ", adj_x, adj_y);
 		BSP_LCD_DisplayStringAtLine(0, (uint8_t*)jotstick_reading_buf);
 
-		if (abs(adj_x) < 60 && abs(adj_y) < 50) { // STOP
+		uint8_t speed = 0x00;
+		uint8_t dir = 0x00;
+
+		if (abs(adj_x) < 20 && abs(adj_y) < 10) { // STOP
 			BSP_LCD_ClearStringLine(2);
-		} else if (adj_x > 60 && adj_y > 50) { // NORTHEAST
+		} else if (adj_x > 20 && adj_y > 10) { // NORTHEAST -> 001
+			speed = (abs(adj_x) + abs(adj_y)) / 12;
+			dir = 0b001;
 			BSP_LCD_DisplayStringAtLine(2, "          NORTHEAST          ");
-			BT_Transmit(&bt, 'e');
-		} else if (adj_x > 60 && adj_y < -50) { // SOUTHEAST
+		} else if (adj_x > 20 && adj_y < -10) { // SOUTHEAST -> 011
+			speed = (abs(adj_x) + abs(adj_y)) / 12;
+			dir = 0b011;
 			BSP_LCD_DisplayStringAtLine(2, "          SOUTHEAST          ");
-			BT_Transmit(&bt, 'x');
-		} else if (adj_x < -60 && adj_y < -50) { // SOUTHWEST
+		} else if (adj_x < -20 && adj_y < -10) { // SOUTHWEST -> 101
+			speed = (abs(adj_x) + abs(adj_y)) / 12;
+			dir = 0b101;
 			BSP_LCD_DisplayStringAtLine(2, "          SOUTHWEST          ");
-			BT_Transmit(&bt, 'z');
-		} else if (adj_x < -60 && adj_y > 50) { // NORTHWEST
+		} else if (adj_x < -20 && adj_y > 10) { // NORTHWEST -> 111
+			speed = (abs(adj_x) + abs(adj_y)) / 12;
+			dir = 0b111;
 			BSP_LCD_DisplayStringAtLine(2, "          NORTHWEST          ");
-			BT_Transmit(&bt, 'q');
-		} else if (adj_y > 50) { // NORTH
+		} else if (adj_y > 10) { // NORTH -> 000
+			speed = (abs(adj_y)) / 6;
+			dir = 0b000;
 			BSP_LCD_DisplayStringAtLine(2, "            NORTH            ");
-			BT_Transmit(&bt, 'w');
-		} else if (adj_x > 60) { // EAST
+		} else if (adj_x > 20) { // EAST -> 010
+			speed = (abs(adj_x)) / 6;
+			dir = 0b010;
 			BSP_LCD_DisplayStringAtLine(2, "            EAST             ");
-			BT_Transmit(&bt, 'd');
-		} else if (adj_y < -50) { // SOUTH
+		} else if (adj_y < -10) { // SOUTH -> 100
+			speed = (abs(adj_y)) / 6;
+			dir = 0b100;
 			BSP_LCD_DisplayStringAtLine(2, "            SOUTH            ");
-			BT_Transmit(&bt, 's');
-		} else if (adj_x < -60) { // WEST
+		} else if (adj_x < -20) { // WEST -> 110
+			speed = (abs(adj_x)) / 6;
+			dir = 0b110;
 			BSP_LCD_DisplayStringAtLine(2, "            WEST             ");
-			BT_Transmit(&bt, 'a');
+		} else {
+			continue;
 		}
+		char buf[60];
+		snprintf(buf, 60, "           Speed: %d          ", speed);
+		BSP_LCD_DisplayStringAtLine(3, (uint8_t*)buf);
+		BT_Transmit(&bt, construct_byte(speed, dir));
 	}
 }
-
-//------------------------------------------------------------------------------------
-// Joystick
-//------------------------------------------------------------------------------------
 
 int8_t _adj_reading(uint32_t raw, uint32_t neu, uint32_t min, uint32_t max) {
 	int32_t tmp = raw - neu;
@@ -146,6 +160,19 @@ int8_t _adj_reading(uint32_t raw, uint32_t neu, uint32_t min, uint32_t max) {
 		return 100.0 * tmp / (neu - min);
 	}
 }
+
+uint8_t construct_byte(uint8_t speed, uint8_t dir) {
+	if (speed > 0b1111) speed = 0b1111;
+	if (dir > 0b111) return 0x00;
+	uint8_t res = (speed << 3) | dir;
+	res = add_parity(res);
+	printf("%d\r\n", res);
+	return res;
+}
+
+//------------------------------------------------------------------------------------
+// Joystick
+//------------------------------------------------------------------------------------
 
 void Adjust_Joystick_Readings() {
 	adj_x = _adj_reading(raw_x, neu_x, min_x, max_x);
