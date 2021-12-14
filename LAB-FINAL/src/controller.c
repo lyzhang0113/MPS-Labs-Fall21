@@ -4,14 +4,19 @@
 //
 //
 
-// ADC1_CHANNEL6 ---> PA6 ---> Arduino A0
-// ADC3_CHANNEL8 ---> PF10 --> Arduino A3
+// Joystick ADC:
+// y-axis: ADC1_CHANNEL6 ---> PA6 ---> Arduino A0
+// x-axis: ADC3_CHANNEL8 ---> PF10 --> Arduino A3
+
+// Message Encoding:
+// [1-bit: parity][4-bit: speed][3-bit: direction]
 
 //------------------------------------------------------------------------------------
 // defines
 //------------------------------------------------------------------------------------
-#define CALIBRATION 1
+#define CALIBRATION 1	// Enable Calibration on startup
 
+// Pre-calibrated Values
 #define NEU_X 1179
 #define NEU_Y 1157
 #define MIN_X 6
@@ -150,16 +155,6 @@ int main(void) {
 	}
 }
 
-int8_t _adj_reading(uint32_t raw, uint32_t neu, uint32_t min, uint32_t max) {
-	int32_t tmp = raw - neu;
-	if (abs(tmp) < 20) {
-		return 0;
-	} else if (tmp > 0) {
-		return 100.0 * tmp / (max - neu);
-	} else {
-		return 100.0 * tmp / (neu - min);
-	}
-}
 
 uint8_t construct_byte(uint8_t speed, uint8_t dir) {
 	if (speed > 0b1111) speed = 0b1111;
@@ -173,6 +168,17 @@ uint8_t construct_byte(uint8_t speed, uint8_t dir) {
 //------------------------------------------------------------------------------------
 // Joystick
 //------------------------------------------------------------------------------------
+
+int8_t _adj_reading(uint32_t raw, uint32_t neu, uint32_t min, uint32_t max) {
+	int32_t tmp = raw - neu;
+	if (abs(tmp) < 20) {
+		return 0;
+	} else if (tmp > 0) {
+		return 100.0 * tmp / (max - neu);
+	} else {
+		return 100.0 * tmp / (neu - min);
+	}
+}
 
 void Adjust_Joystick_Readings() {
 	adj_x = _adj_reading(raw_x, neu_x, min_x, max_x);
